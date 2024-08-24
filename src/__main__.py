@@ -31,6 +31,43 @@ def to_page_count(value, page_size=4096):
     return math.ceil(value / page_size)
 
 
+def uefi_patch(pe_data, offset):
+    # Replacing a jump, trashing some error handling code that shouldn't really
+    # happen.
+
+    # mov rsi, rbx
+    # add rax, rcx
+    # jmp rax
+    bs = BinSearch([FixedBytes(b'\x48\x89\xDE\x48\x01\xC8\xFF\xE0')])
+    matches = bs.search(pe_data)
+
+    assert(len(matches) == 1)
+
+    target_jump_offset = matches[0][0]
+    dist = offset - target_jump_offset
+    # note: we need to do the instructions we replaced in the next stage!!!
+    transfer = pad(assemble(f'jmp {hex(dist)}'), 8, before=True, value=b'\x90')
+    pe_data[target_jump_offset:target_jump_offset+8] = transfer
+    return pe_data
+
+
+def bios_patch(pe_data, offset):
+    # Patching for BIOS
+    bs = BinSearch([
+        FixedBytes(b'\xe8'),
+        SkipBytes(4),
+        FixedBytes(b'\x4c\x89\xfe\xff\xe0')
+    ])
+    matches = bs.search(pe_data)
+    assert(len(matches) == 1)
+
+    # we'll be jumping back down to an old mapping at a fixed address.
+    pe_data[matches[0][0]:matches[0][0]+2] = b'\xeb\xfe'
+    # pe_data[0x5000:0x5000+2] = b'\xeb\xfe'
+    print(matches[0][0], offset)
+    return pe_data
+
+
 def add_data(pe_data_orig, data):
     to_add = pad(data, 4096)
 
@@ -88,36 +125,11 @@ def add_data(pe_data_orig, data):
     pe_data[last_offset + 20:last_offset + 20 + 4] = \
         struct.pack('<I', offset)
 
-    # Replacing a jump, trashing some error handling code that shouldn't really
-    # happen.
+    # Our UEFI Patch to transfer control
+    pe_data = uefi_patch(pe_data, offset)
 
-    # mov rsi, rbx
-    # add rax, rcx
-    # jmp rax
-    bs = BinSearch([FixedBytes(b'\x48\x89\xDE\x48\x01\xC8\xFF\xE0')])
-    matches = bs.search(pe_data)
-
-    assert(len(matches) == 1)
-
-    target_jump_offset = matches[0][0]
-    dist = offset - target_jump_offset
-    # note: we need to do the instructions we replaced in the next stage!!!
-    transfer = pad(assemble(f'jmp {hex(dist)}'), 8, before=True, value=b'\x90')
-    pe_data[target_jump_offset:target_jump_offset+8] = transfer
-
-    # Patching for BIOS
-    bs = BinSearch([
-        FixedBytes(b'\xe8'),
-        SkipBytes(4),
-        FixedBytes(b'\x4c\x89\xfe\xff\xe0')
-    ])
-    matches = bs.search(pe_data)
-    assert(len(matches) == 1)
-
-    # we'll be jumping back down to an old mapping at a fixed address.
-    pe_data[matches[0][0]:matches[0][0]+2] = b'\xeb\xfe'
-    # pe_data[0x5000:0x5000+2] = b'\xeb\xfe'
-    print(matches[0][0], offset)
+    # Our BIOS Patch to transfer control
+    pe_data = bios_patch(pe_data, offset)
 
     return pe_data
 
