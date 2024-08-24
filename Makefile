@@ -30,23 +30,6 @@ run-bios: build
 		-monitor tcp:127.0.0.1:55555,server,nowait \
 		-netdev user,id=network0 -device e1000,netdev=network0,mac=52:54:00:12:34:56
 
-
-run-ovmf-2:
-	qemu-system-x86_64 \
-		-accel kvm \
-		-smbios type=0,uefi=on \
-        -bios /usr/share/ovmf/OVMF.fd \
-		-hda $(ROOTFS) \
-		-m 4G \
-		-kernel ./sample-kernels/removed.kernel \
-		-nographic \
-		-gdb tcp::1234 \
-		-S \
-		-append "console=ttyS0,9600 root=/dev/sda" \
-		-monitor tcp:127.0.0.1:55555,server,nowait \
-		-netdev user,id=network0 -device e1000,netdev=network0,mac=52:54:00:12:34:56
-
-
 build:
 	make -C ./payload/stage1/ clean
 	SYMBOLS=`pwd`/sample-kernels/kallsyms make -C ./payload/stage1/

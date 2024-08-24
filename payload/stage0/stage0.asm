@@ -1,5 +1,12 @@
 BITS 64
 
+_bios_entry:
+    jmp _start
+
+
+    align 32
+
+_uefi_entry:
 ; just some instructions we patched out, doing it here to make the patch
 ; cleaner.
 _before:
