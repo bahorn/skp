@@ -35,39 +35,58 @@ def add_data(pe_data_orig, data):
     to_add = pad(data, 4096)
 
     pe = pefile.PE(data=pe_data_orig)
+
+    # Make the last sections raw size equal to its virtual size
+    curr_virtual_size = pe.sections[-1].Misc_VirtualSize
+    curr_real_size = pe.sections[-1].SizeOfRawData
+    pe.sections[-1].SizeOfRawData = curr_virtual_size
+
+    # Need some offsets for patching
+    last_offset = pe.sections[-1].__file_offset__ + 0x28
+
+    text_offset = 0
+    for section in pe.sections:
+        if section.Name != b'.text\x00\x00\x00':
+            continue
+
+        text_offset = section.__file_offset__
+        break
+
     # Now we update the headers
     pe.FILE_HEADER.NumberOfSections += 1
     pe.OPTIONAL_HEADER.SizeOfImage += len(to_add)
     pe.OPTIONAL_HEADER.SizeOfCode = pe.OPTIONAL_HEADER.SizeOfImage
     pe_data = bytearray(pe.write())
 
-    # Update the last sections sizeOfRawData to be equal to its virtualSize
-    curr_virtual_size = pe_data[0x178:0x178+4]
-    curr_real_size = pe_data[0x180:0x180+4]
-    pe_data[0x180:0x180+4] = curr_virtual_size
-
-    to_pad_with = struct.unpack('<I', curr_virtual_size)[0] - \
-        struct.unpack('<I', curr_real_size)[0]
+    # Pad the last section
+    to_pad_with = curr_virtual_size - curr_real_size
     pe_data += b'\x00' * to_pad_with
 
-    # add the data we are appending
+    # Now append our data
     offset = len(pe_data)
     pe_data += to_add
 
-    # Create new section
-    pe_data[0x198:0x198 + 0x28] = pe_data[0x148:0x148 + 0x28]
+    # Create new section based on .text, with the same permissions.
+    pe_data[last_offset:last_offset + 0x28] = \
+        pe_data[text_offset:text_offset + 0x28]
+
+    # Need to use offsets here to work around library issues.
 
     # name
-    pe_data[0x198:0x198 + 8] = b'.patch\x00\x00'
+    pe_data[last_offset:last_offset + 8] = b'.patch\x00\x00'
 
     # virtualSize
-    pe_data[0x1a0:0x1a0 + 4] = struct.pack('<I', len(to_add))
+    pe_data[last_offset + 8:last_offset + 8 + 4] = \
+        struct.pack('<I', len(to_add))
     # rva
-    pe_data[0x1a4:0x1a4 + 4] = struct.pack('<I', offset)
+    pe_data[last_offset + 12:last_offset + 12 + 4] = \
+        struct.pack('<I', offset)
     # size of raw data
-    pe_data[0x1a8:0x1a8 + 4] = struct.pack('<I', len(to_add))
+    pe_data[last_offset + 16:last_offset + 16 + 4] = \
+        struct.pack('<I', len(to_add))
     # ptr raw data
-    pe_data[0x1ac:0x1ac + 4] = struct.pack('<I', offset)
+    pe_data[last_offset + 20:last_offset + 20 + 4] = \
+        struct.pack('<I', offset)
 
     # Replacing a jump, trashing some error handling code that shouldn't really
     # happen.
