@@ -1,0 +1,7 @@
+*.o
+logs
+sample-kernels
+old
+*.pyc
+__pycache__
+*.bin
