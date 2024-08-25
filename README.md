@@ -1,50 +1,46 @@
 # Modern Static Kernel Patching
 
-A bootkit called Pestilence.
+A PoC tool to patch linux kernel images to add in a kSHELF, as an PoC approach to
+implement a bootkit.
 
-## Strats
+Doesn't touch UEFI, no secureboot bypasses here.
 
-* Why not just replace the compressed Kernel
-* * Big issue here is that extract_kernel comes after it.
-* * Maybe not too big of a deal if we just update the offset used for the jump?
-* Extend existing .text, add in our code, patch to make sure we have space.
+## Usage
 
-
-Extend .text, place patcher code at end.
-Hook just before we jump to the Kernel to jump to our patcher
-Make sure we don't hit .bss, heap, whatever, adjust those in the code.
-Fix checksums.
+read the source, this ain't a something simple to use.
 
 
-Patch to apply:
-* hook init call to jump to kshelf loader
+## Techniques
 
 
-what if we put out patch at the start of 
+### UEFI
+
+(only kernels >6.6 currently)
 
 
+Creates a new PE section called .patch, and expands the previous one to make the
+raw size match the virtual size.
 
-6.8 changed how extract_kernel is called, still using rbp as output.
-
-
-
-
-So actually tampering with startup_64 might be viable, then we replace the
-compressed kernel and patch in our code to it.
+Then it patches code that jumps to the kernel right after decompression.
+We apply our kernel patches here, then jump to it.
 
 
-.head.text -> just startup_64 and some others, we can find its end via looking
-for the magic number for the compression. (currently zstd).
-.rodata..compressed -> compressed blob
-.text -> follows the compressed code.
+### BIOS
+
+This case we patch the code that is called right after decompression, and make
+it jump to 0x100_000 + offset to our code.
+
+We have to do this as page tables are setup at that point, and will cut off our
+appended data from being accessed relatively.
+
+But there remains the mapping at 0x100_000 we can still use, which is where we
+call our patcher from.
 
 
-so if we replace .rodata..compressed with a new kernel + update some values in
-startup_64, should be fine?
-problem is all the things in .data, .rodata, .bss
+## Notes
 
+Heavily relies on pattern matching ASM, some from compilers.
+Would rather not, but kinda had to in some cases.
 
-
-
-what about unified kernel images?
--> probably a second section?
+There are edge cases! This will make boxes unbootable if you actually try to use
+it!
