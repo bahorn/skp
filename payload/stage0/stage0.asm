@@ -1,18 +1,22 @@
 BITS 64
+; Several ways we can reach this code, we just keep them at fixed offsets so we
+; can adjust our patches to use them.
+
 
 _bios_entry:
     jmp _start
 
-
-    align 32
+    align 32, db 0xff
 
 _uefi_entry:
 ; just some instructions we patched out, doing it here to make the patch
 ; cleaner.
-_before:
     mov rsi, rbx
     add rax, rcx
 
+
+
+; Now onto our real start:
 _start:
     push rax
     push rcx

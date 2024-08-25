@@ -7,7 +7,7 @@ import math
 import struct
 import pefile
 from keystone import Ks, KS_ARCH_X86, KS_MODE_64, KS_OPT_SYNTAX_ATT
-from binsearch import FixedBytes, SkipBytes, BinSearch
+from binsearch import FixedBytes, BinSearch
 from pe import PERemoveSig, PECheckSumFix
 from remove_reloc import remove_reloc
 
@@ -44,16 +44,20 @@ def uefi_patch(pe_data, offset):
         FixedBytes(b'\x48\x01\xC8'),
         FixedBytes(b'\xFF\xE0')
     ])
+    total = 3 + 3 + 2
     matches = bs.search(pe_data)
 
     assert(len(matches) == 1)
 
     target_jump_offset = matches[0][0]
-    dist = offset - target_jump_offset
-    dist -= 32
+    dist = offset - (target_jump_offset + total - 5)
+    dist += 32
     # note: we need to do the instructions we replaced in the next stage!!!
-    transfer = pad(assemble(f'jmp {hex(dist)}'), 8, before=True, value=b'\x90')
-    pe_data[target_jump_offset:target_jump_offset+8] = transfer
+    transfer = pad(
+        assemble(f'jmp {hex(dist)}'),
+        total, before=True, value=b'\x90'
+    )
+    pe_data[target_jump_offset:target_jump_offset+total] = transfer
     return pe_data
 
 
