@@ -1,4 +1,5 @@
 *.o
+*.s
 logs
 sample-kernels
 old

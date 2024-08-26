@@ -2,7 +2,6 @@
 #include <stddef.h>
 #include <stdbool.h>
 #include "main.h"
-#include "../../../../klude2/artifacts/payload.h"
 
 #define PAGE_SIZE 4096
 
@@ -202,6 +201,8 @@ void run_elf(void *elf, size_t len)
     start();
 }
 
+
+#include "../../../sample-kernels/payload.h"
 
 void main(void) {
     _printk("PATCHED KERNEL\n");

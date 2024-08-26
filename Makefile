@@ -4,6 +4,8 @@ SOURCE_KERNEL=./sample-kernels/vmlinuz-6.8.0-40-generic
 #SOURCE_KERNEL=/media/a/misc/git/tmpout-submissions/skp/sample-kernels/arch/usr/lib/modules/6.10.6-arch1-1/vmlinuz
 ROOTFS=./sample-kernels/openwrt-23.05.4-x86-64-generic-ext4-rootfs.img
 
+PAYLOAD=../klude2/artifacts/main.bin
+
 run-ovmf: build
 	qemu-system-x86_64 \
 		-accel kvm \
@@ -38,6 +40,7 @@ build:
 	# extract kallsyms
 	# Find space we can copy our payload to in the kernel image
 	# compile the payload
+	./tools/xxd.py $(PAYLOAD) payload > ./sample-kernels/payload.h
 	SYMBOLS=`pwd`/sample-kernels/kallsyms make -C ./payload/stage1/
 	SYMBOLS=`pwd`/sample-kernels/kallsyms make -C ./payload/stage0/
 	cat ./payload/stage0/stage0.bin ./payload/stage1/stage1.bin > ./payload/all.bin
