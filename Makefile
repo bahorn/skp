@@ -33,8 +33,14 @@ run-bios: build
 		-netdev user,id=network0 -device e1000,netdev=network0,mac=52:54:00:12:34:56
 
 build:
+	# cleaning
 	make -C ./payload/stage1/ clean
+	# extract kallsyms
+	# Find space we can copy our payload to in the kernel image
+	# compile the payload
 	SYMBOLS=`pwd`/sample-kernels/kallsyms make -C ./payload/stage1/
-	make -C ./payload/stage0/
+	SYMBOLS=`pwd`/sample-kernels/kallsyms make -C ./payload/stage0/
 	cat ./payload/stage0/stage0.bin ./payload/stage1/stage1.bin > ./payload/all.bin
+
+	# Patch the kernel image to install the payload
 	python3 src $(SOURCE_KERNEL) $(PATCHED_KERNEL)

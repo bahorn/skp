@@ -35,7 +35,7 @@ _start:
 
 
 ; hook initcall to call our stage1
-%define _initcall_offset 0x02_b6_ee_08
+; %define _initcall_offset 0x02_b6_ee_08
     ; (rax + _initcall_offset + value)
     ; 0xffdd6d48
     mov edi, _stage1_offset - _initcall_offset
