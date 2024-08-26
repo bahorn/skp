@@ -105,3 +105,4 @@ $(OUT): src/entry.o src/main.o
 
 clean:
 	-rm src/*.o src/*.s $(OUT)
+	-rm -r generated
