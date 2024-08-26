@@ -1,5 +1,5 @@
 PATCHED_KERNEL=./sample-kernels/patch-kernel.bzimage
-SOURCE_KERNEL=`pwd`/sample-kernels/vmlinuz-6.8.0-40-generic
+SOURCE_KERNEL=`pwd`/sample-kernels/vmlinuz-6.8.0-41-generic
 ROOTFS=./sample-kernels/openwrt-23.05.4-x86-64-generic-ext4-rootfs.img
 
 PAYLOAD=`pwd`/../klude2/artifacts/main.bin
@@ -53,6 +53,7 @@ build: clean
 clean:
 	make -C ./payload/ clean
 	-rm -r ./intermediate/
+	-rm $(PATCHED_KERNEL)
 
 
 setup:
