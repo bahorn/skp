@@ -35,7 +35,7 @@ run-bios: build
 build: clean
 	mkdir ./intermediate
 	# extract kallsyms
-	cp ./sample-kernels/kallsyms intermediate
+	kallsyms-finder $(SOURCE_KERNEL) > intermediate/kallsyms
 
 	# extract the kernel so we can find an offset to copy out payload to in the
 	# kernel image.
@@ -53,3 +53,8 @@ build: clean
 clean:
 	make -C ./payload/ clean
 	-rm -r ./intermediate/
+
+
+setup:
+	virtualenv -p python3 .venv
+	./tools/setup.sh

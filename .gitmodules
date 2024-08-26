@@ -1,0 +1,3 @@
+[submodule "vmlinux-to-elf"]
+	path = tools/vmlinux-to-elf
+	url = https://github.com/bahorn/vmlinux-to-elf.git
