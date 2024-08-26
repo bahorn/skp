@@ -1,5 +1,7 @@
 PATCHED_KERNEL=./sample-kernels/out2
 SOURCE_KERNEL=./sample-kernels/vmlinuz-6.8.0-40-generic
+#SOURCE_KERNEL=./sample-kernels/vmlinuz-5.15.0-117-generic
+#SOURCE_KERNEL=/media/a/misc/git/tmpout-submissions/skp/sample-kernels/arch/usr/lib/modules/6.10.6-arch1-1/vmlinuz
 ROOTFS=./sample-kernels/openwrt-23.05.4-x86-64-generic-ext4-rootfs.img
 
 run-ovmf: build

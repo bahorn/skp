@@ -117,6 +117,9 @@ def bios_patch(pe_data, offset):
         total, before=True, value=b'\x90'
     )
 
+    # Now we want to disable relocation so the kernel is always at 0x100_000
+    pe_data[0x234] = 0
+
     return pe_data
 
 
@@ -211,6 +214,8 @@ def main():
     )
 
     # Checksum fixes for sanity
+    # need to fix the bzImage checksum. Nothing really checks it, but lets do
+    # it for completenes.
     last = PECheckSumFix(a).fix()
     open(sys.argv[2], 'wb').write(last)
 
