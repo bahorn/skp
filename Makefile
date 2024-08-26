@@ -37,12 +37,19 @@ run-bios: build
 build:
 	# cleaning
 	make -C ./payload/stage1/ clean
+	make -C ./payload/stage0/ clean
+	-rm ./payload/all.bin
 	# extract kallsyms
-	# Find space we can copy our payload to in the kernel image
+	# extract the kernel so we can find an offset to copy out payload to in the
+	# kernel image.
+	./tools/extract-vmlinux $(SOURCE_KERNEL) > ./sample-kernels/curr.elf
+
 	# compile the payload
 	./tools/xxd.py $(PAYLOAD) payload > ./sample-kernels/payload.h
-	SYMBOLS=`pwd`/sample-kernels/kallsyms make -C ./payload/stage1/
-	SYMBOLS=`pwd`/sample-kernels/kallsyms make -C ./payload/stage0/
+	SYMBOLS=`pwd`/sample-kernels/kallsyms LOAD_OFFSET=0x01320000 \
+			make -C ./payload/stage1/
+	SYMBOLS=`pwd`/sample-kernels/kallsyms LOAD_OFFSET=0x01320000 \
+			make -C ./payload/stage0/
 	cat ./payload/stage0/stage0.bin ./payload/stage1/stage1.bin > ./payload/all.bin
 
 	# Patch the kernel image to install the payload

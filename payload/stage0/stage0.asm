@@ -27,7 +27,7 @@ _start:
  
 ; so the kernel pads sections with 0xcc, with a 0x20_00_00 alignment, so we
 ; have a ton of free space to place a payload.
-%define _stage1_offset 0x01_30_00_00
+; %define _stage1_offset 0x01_30_00_00
     lea rsi, [rel stage1]
     lea rdi, [rax + _stage1_offset]
     mov rcx, stage1_len

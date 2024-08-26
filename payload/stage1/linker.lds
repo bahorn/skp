@@ -4,7 +4,8 @@ OUTPUT_FORMAT("binary")
 INCLUDE "generated/offsets.lds"
 
 # Needed to compute offsets to symbols.
-LOAD_ADDRESS = startup_64 + 0x01300000;
+INCLUDE "generated/load.lds"
+LOAD_ADDRESS = startup_64 + LOAD_OFFSET;
 
 SECTIONS
 {

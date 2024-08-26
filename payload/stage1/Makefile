@@ -100,6 +100,7 @@ src/main.o: src/main.s
 $(OUT): src/entry.o src/main.o
 	mkdir -p generated
 	python3 ./scripts/symbol_offsets.py $(SYMBOLS) > generated/offsets.lds
+	echo LOAD_OFFSET = $(LOAD_OFFSET)\; > generated/load.lds
 	$(LD) -o $(OUT) $(LDFLAGS) src/*.o
 
 clean:
