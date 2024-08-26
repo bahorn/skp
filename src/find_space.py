@@ -1,13 +1,31 @@
 import sys
 from elftools.elf.elffile import ELFFile
 
+# just under 1mb
+# May need adjusting, worked on a 5.15 kernel.
+WANT = 0x00_0f_00_00
+
 
 def main():
-    f = ELFFile(open(sys.argv[1], 'rb'))
+    fp = open(sys.argv[1], 'rb')
+    data = fp.read()
+
+    fp.seek(0)
+
+    f = ELFFile(fp)
+
     rodata = f.get_section_by_name('.rodata')
     text = f.get_section_by_name('.text')
 
-    print(hex(rodata.header['sh_offset'] - text.header['sh_offset']))
+    spot = rodata.header['sh_offset'] - text.header['sh_offset']
+
+    start = spot - WANT
+    end = spot
+
+    for i in range(start, end):
+        assert(data[i] == 0xcc)
+
+    print(hex(spot - WANT))
 
 
 if __name__ == "__main__":

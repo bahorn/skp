@@ -43,7 +43,7 @@ build:
 	# compile the payload
 	PAYLOAD=$(SOURCE_KERNEL) \
 		SYMBOLS=`pwd`/sample-kernels/kallsyms \
-		LOAD_OFFSET=0x01320000 \
+		LOAD_OFFSET=`python3 ./src/find_space.py ./sample-kernels/curr.elf` \
 		make -C ./payload/
 
 	# Patch the kernel image to install the payload
