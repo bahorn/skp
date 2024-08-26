@@ -1,4 +1,4 @@
-PATCHED_KERNEL=./sample-kernels/out2
+PATCHED_KERNEL=./sample-kernels/patch-kernel.bzimage
 SOURCE_KERNEL=`pwd`/sample-kernels/vmlinuz-6.8.0-40-generic
 ROOTFS=./sample-kernels/openwrt-23.05.4-x86-64-generic-ext4-rootfs.img
 
@@ -32,19 +32,24 @@ run-bios: build
 		-monitor tcp:127.0.0.1:55555,server,nowait \
 		-netdev user,id=network0 -device e1000,netdev=network0,mac=52:54:00:12:34:56
 
-build:
-	# cleaning
-	make -C ./payload/ clean
+build: clean
+	mkdir ./intermediate
 	# extract kallsyms
+	cp ./sample-kernels/kallsyms intermediate
+
 	# extract the kernel so we can find an offset to copy out payload to in the
 	# kernel image.
-	./tools/extract-vmlinux $(SOURCE_KERNEL) > ./sample-kernels/curr.elf
+	./tools/extract-vmlinux $(SOURCE_KERNEL) > ./intermediate/curr.elf
 
 	# compile the payload
 	PAYLOAD=$(PAYLOAD) \
-		SYMBOLS=`pwd`/sample-kernels/kallsyms \
-		LOAD_OFFSET=`python3 ./src/find_space.py ./sample-kernels/curr.elf` \
+		SYMBOLS=`pwd`/intermediate/kallsyms \
+		LOAD_OFFSET=`python3 ./src/find_space.py ./intermediate/curr.elf` \
 		make -C ./payload/
 
 	# Patch the kernel image to install the payload
 	python3 src $(SOURCE_KERNEL) $(PATCHED_KERNEL)
+
+clean:
+	make -C ./payload/ clean
+	-rm -r ./intermediate/
