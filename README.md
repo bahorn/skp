@@ -10,6 +10,23 @@ Doesn't touch UEFI, no secureboot bypasses here.
 read the source, this ain't a something simple to use.
 
 
+Setup:
+```
+make setup
+```
+
+Will setup a virtualenv and the dependencies.
+
+You need to activate the venv before moving on:
+```
+source .venv/bin/activate
+```
+
+Then, you need to adjust the kernel image defined in the `Makefile` to be
+your kernel, and update the payload.
+
+Then `make run-ovmf` or `make run-bios` to test it out.
+
 ## Techniques
 
 
