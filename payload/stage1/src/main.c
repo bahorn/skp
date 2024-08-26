@@ -202,7 +202,7 @@ void run_elf(void *elf, size_t len)
 }
 
 
-#include "../../../sample-kernels/payload.h"
+#include "../../payload.h"
 
 void main(void) {
     _printk("PATCHED KERNEL\n");

@@ -2,7 +2,7 @@ PATCHED_KERNEL=./sample-kernels/out2
 SOURCE_KERNEL=`pwd`/sample-kernels/vmlinuz-6.8.0-40-generic
 ROOTFS=./sample-kernels/openwrt-23.05.4-x86-64-generic-ext4-rootfs.img
 
-PAYLOAD=../klude2/artifacts/main.bin
+PAYLOAD=`pwd`/../klude2/artifacts/main.bin
 
 run-ovmf: build
 	qemu-system-x86_64 \
@@ -41,7 +41,7 @@ build:
 	./tools/extract-vmlinux $(SOURCE_KERNEL) > ./sample-kernels/curr.elf
 
 	# compile the payload
-	PAYLOAD=$(SOURCE_KERNEL) \
+	PAYLOAD=$(PAYLOAD) \
 		SYMBOLS=`pwd`/sample-kernels/kallsyms \
 		LOAD_OFFSET=`python3 ./src/find_space.py ./sample-kernels/curr.elf` \
 		make -C ./payload/
