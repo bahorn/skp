@@ -61,27 +61,6 @@ def uefi_patch(pe_data, offset):
     return pe_data
 
 
-def old_uefi_patch(pe_data, offset):
-    bs = BinSearch([
-        FixedBytes(b'\x5e'),
-        FixedBytes(b'\xff\xe0'),
-        FixedBytes(b'\x0f\x1f\x80\x00\x00\x00\x00')
-    ])
-
-    matches = bs.search(pe_data)
-
-    assert(len(matches) == 1)
-
-    target_jump_offset = matches[0][0]
-    dist = offset - target_jump_offset
-    transfer = pad(
-        assemble(f'self: jmp self\njmp {hex(dist)}'),
-        10, before=True, value=b'\x90'
-    )
-    pe_data[target_jump_offset:target_jump_offset+10] = transfer
-    return pe_data
-
-
 def bios_patch(pe_data, offset):
     # Patching for BIOS
     # end of startup_64
@@ -99,8 +78,14 @@ def bios_patch(pe_data, offset):
     matches = bs.search(pe_data)
     assert(len(matches) == 1)
 
-    # Address of our code
-    target_addr = 0x100000 + offset - 0x5000
+    # Now we want to disable relocation so the kernel is always at its prefered
+    # address with various bootloaders.
+    pe_data[0x234] = 0
+    # And fix the prefered address.
+    pe_data[0x258:0x258 + 8] = struct.pack('<Q', 0x100_000)
+
+    # Our takeover code.
+    target_addr = 0x100_000 + offset - 0x5000
 
     # Jumping to an exact address
     to_patch_in = f"""
@@ -116,9 +101,6 @@ def bios_patch(pe_data, offset):
         patch,
         total, before=True, value=b'\x90'
     )
-
-    # Now we want to disable relocation so the kernel is always at 0x100_000
-    pe_data[0x234] = 0
 
     return pe_data
 
