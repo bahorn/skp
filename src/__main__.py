@@ -118,7 +118,6 @@ def add_data(pe_data_orig, data):
     # Make the last sections raw size equal to its virtual size
     curr_virtual_size = pe.sections[-1].Misc_VirtualSize
     curr_real_size = pe.sections[-1].SizeOfRawData
-    pe.sections[-1].SizeOfRawData = curr_virtual_size
 
     # Need some offsets for patching
     last_offset = pe.sections[-1].__file_offset__ + 0x28
@@ -139,10 +138,10 @@ def add_data(pe_data_orig, data):
 
     # Pad the last section
     to_pad_with = curr_virtual_size - curr_real_size
-    pe_data += b'\x00' * to_pad_with
 
     # Now append our data
     offset = len(pe_data)
+    uefi_offset = to_pad_with + offset
     pe_data += to_add
 
     # Create new section based on .text, with the same permissions.
@@ -159,7 +158,7 @@ def add_data(pe_data_orig, data):
         struct.pack('<I', len(to_add))
     # rva
     pe_data[last_offset + 12:last_offset + 12 + 4] = \
-        struct.pack('<I', offset)
+        struct.pack('<I', uefi_offset)
     # size of raw data
     pe_data[last_offset + 16:last_offset + 16 + 4] = \
         struct.pack('<I', len(to_add))
@@ -168,7 +167,7 @@ def add_data(pe_data_orig, data):
         struct.pack('<I', offset)
 
     # Our UEFI Patch to transfer control
-    pe_data = uefi_patch(pe_data, offset)
+    pe_data = uefi_patch(pe_data, uefi_offset)
 
     # Our BIOS Patch to transfer control
     pe_data = bios_patch(pe_data, offset)
