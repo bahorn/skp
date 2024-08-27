@@ -76,7 +76,9 @@ def bios_patch(pe_data, offset):
     ])
     total = 2 + 9
     matches = bs.search(pe_data)
-    assert(len(matches) == 1)
+
+    if len(matches) == 0:
+        return None
 
     # Now we want to disable relocation so the kernel is always at its prefered
     # address with various bootloaders.
@@ -105,6 +107,46 @@ def bios_patch(pe_data, offset):
     return pe_data
 
 
+def old_bios_patch(pe_data, offset):
+    bs = BinSearch([
+        FixedBytes(b'\x5e'),
+        FixedBytes(b'\xff\xe0'),
+        FixedBytes(b'\x0f\x1f\x80\x00\x00\x00\x00')
+    ])
+    total = 2 + 7
+
+    matches = bs.search(pe_data)
+
+    print(matches)
+    assert(len(matches) == 1)
+
+    # Now we want to disable relocation so the kernel is always at its prefered
+    # address with various bootloaders.
+    pe_data[0x234] = 0
+    # And fix the prefered address.
+    pe_data[0x258:0x258 + 8] = struct.pack('<Q', 0x100_000)
+
+    # Our takeover code.
+    target_addr = 0x100_000 + offset - 0x3800
+
+    # Jumping to an exact address
+    to_patch_in = f"""
+        pushq ${hex(target_addr)}
+        ret
+    """
+
+    patch = assemble(to_patch_in)
+    assert(len(patch) < total)
+
+    # we'll be jumping back down to an old mapping at a fixed address.
+    pe_data[matches[0][0] + 1:matches[0][0]+total + 1] = pad(
+        patch,
+        total, before=True, value=b'\x90'
+    )
+
+    return pe_data
+
+
 def add_data(pe_data_orig, data):
     """
     Add a new section to store our patch in the PE, then append our data, and
@@ -117,7 +159,10 @@ def add_data(pe_data_orig, data):
 
     # Make the last sections raw size equal to its virtual size
     curr_virtual_size = pe.sections[-1].Misc_VirtualSize
+    pe.sections[-1].SizeOfRawData += 8192
     curr_real_size = pe.sections[-1].SizeOfRawData
+
+    assert(curr_real_size <= curr_virtual_size)
 
     # Need some offsets for patching
     last_offset = pe.sections[-1].__file_offset__ + 0x28
@@ -136,7 +181,8 @@ def add_data(pe_data_orig, data):
     pe.OPTIONAL_HEADER.SizeOfCode = pe.OPTIONAL_HEADER.SizeOfImage
     pe_data = bytearray(pe.write())
 
-    # Pad the last section
+    # Pad the last section with nulls so our code doesn't get trashed.
+    pe_data += b'\x00' * 8192
     to_pad_with = curr_virtual_size - curr_real_size
 
     # Now append our data
@@ -167,10 +213,13 @@ def add_data(pe_data_orig, data):
         struct.pack('<I', offset)
 
     # Our UEFI Patch to transfer control
-    pe_data = uefi_patch(pe_data, uefi_offset)
+    # pe_data = uefi_patch(pe_data, uefi_offset)
 
     # Our BIOS Patch to transfer control
-    pe_data = bios_patch(pe_data, offset)
+    res = bios_patch(pe_data, offset)
+    if res is None:
+        res = old_bios_patch(pe_data, offset)
+    pe_data = res
 
     return pe_data
 

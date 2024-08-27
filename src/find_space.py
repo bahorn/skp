@@ -3,7 +3,7 @@ from elftools.elf.elffile import ELFFile
 
 # just under 1mb
 # May need adjusting, worked on a 5.15 kernel.
-WANT = 0x00_0f_00_00
+WANT = 0x00_01_00_00
 
 
 def main():

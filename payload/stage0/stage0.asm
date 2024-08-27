@@ -18,6 +18,8 @@ _uefi_entry:
 
 ; Now onto our real start:
 _start:
+    ; align 8192, db 0x90
+
     push rax
     push rcx
     push rdi
