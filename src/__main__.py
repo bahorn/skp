@@ -65,28 +65,60 @@ def uefi_patch(pe_data, offset):
     return pe_data
 
 
-def bios_patch(pe_data, offset):
+def bios_patch(pe_data, offset, text_offset=0x5000):
     # Patching for BIOS
-    # end of startup_64
-    # we include some random junk that I *think* comes from code to handle non
-    # 64bit CPUs, so who cares if we trash it.
-    # .Lno_longmode in the kernel tree
-    # Saves us having to call extract_kernel in next stage if overwrite it,
-    # as we need space to pushq and ret.
-    bs = BinSearch([
-        # FixedBytes(b'\x4c\x89\xfe'),
-        FixedBytes(b'\xff\xe0'),
-        FixedBytes(b'\xf4\xeb\xfd\x66\x0f\x1f\x44\x00\x00')
-    ])
-    total = 2 + 9
-    matches = bs.search(pe_data)
+    # targetting the end of startup_64, in Lrelocated
+    # have to match on two sequences, on for newer kernels and one for older as
+    # there has been some changes in what is otherwise a pretty stable part of
+    # the kernel tree.
+    # for the post 6.6 we overwrite some instructions that get used for error
+    # handling, which on correctly booted systems isn't an issue.
+    # pre 6.6, should be clean, just overwriting a large nop instruction used
+    # for padding and the jmp to rax.
 
-    if len(matches) == 0:
-        return None
+    patterns = [
+        # post 6.6
+        {
+            'total': 2 + 9,
+            'offset': 3,
+            'pattern': [
+                FixedBytes(b'\x4c\x89\xfe'),
+                FixedBytes(b'\xff\xe0'),
+                FixedBytes(b'\xf4\xeb\xfd\x66\x0f\x1f\x44\x00\x00')
+            ]
+        },
+        # pre 6.6
+        {
+            'total': 2 + 7,
+            'offset': 1,
+            'pattern': [
+                FixedBytes(b'\x5e'),
+                FixedBytes(b'\xff\xe0'),
+                FixedBytes(b'\x0f\x1f\x80\x00\x00\x00\x00')
+            ]
+        }
+    ]
+
+    match_offset = 0
+    total = 0
+    matches = []
+
+    for pattern in patterns:
+        bs = BinSearch(pattern['pattern'])
+        match_offset = pattern['offset']
+        total = pattern['total']
+        matches = bs.search(pe_data)
+
+        if len(matches) == 1:
+            break
+
+    if len(matches) != 1:
+        raise Exception('pattern matching bios sequence failed!')
 
     # Our takeover code.
     # 0x5000 is the start of .text
-    target_addr = 0x100_000 + offset + BIOS_START - 0x5000
+    print(text_offset)
+    target_addr = 0x100_000 + offset + BIOS_START - text_offset
 
     # Jumping to an exact address
     to_patch_in = f"""
@@ -98,42 +130,9 @@ def bios_patch(pe_data, offset):
     assert(len(patch) < total)
 
     # we'll be jumping back down to an old mapping at a fixed address.
-    pe_data[matches[0][0]:matches[0][0]+total] = pad(
-        patch,
-        total, before=True, value=b'\x90'
-    )
-
-    return pe_data
-
-
-def old_bios_patch(pe_data, offset):
-    bs = BinSearch([
-        FixedBytes(b'\x5e'),
-        FixedBytes(b'\xff\xe0'),
-        FixedBytes(b'\x0f\x1f\x80\x00\x00\x00\x00')
-    ])
-    total = 2 + 7
-
-    matches = bs.search(pe_data)
-
-    print(matches)
-    assert(len(matches) == 1)
-
-    # Our takeover code.
-    # this comes from the start of .text
-    target_addr = 0x100_000 + offset + BIOS_START - 0x3800
-
-    # Jumping to an exact address
-    to_patch_in = f"""
-        pushq ${hex(target_addr)}
-        ret
-    """
-
-    patch = assemble(to_patch_in)
-    assert(len(patch) < total)
-
-    # we'll be jumping back down to an old mapping at a fixed address.
-    pe_data[matches[0][0] + 1:matches[0][0]+total + 1] = pad(
+    start = matches[0][0] + match_offset
+    end = matches[0][0] + total + match_offset
+    pe_data[start:end] = pad(
         patch,
         total, before=True, value=b'\x90'
     )
@@ -162,11 +161,13 @@ def add_data(pe_data_orig, data):
     last_offset = pe.sections[-1].__file_offset__ + 0x28
 
     text_offset = 0
+    text_start = 0
     for section in pe.sections:
         if section.Name != b'.text\x00\x00\x00':
             continue
 
         text_offset = section.__file_offset__
+        text_start = section.PointerToRawData
         break
 
     # Now we update the headers
@@ -216,10 +217,7 @@ def add_data(pe_data_orig, data):
     # pe_data = uefi_patch(pe_data, uefi_offset)
 
     # Our BIOS Patch to transfer control
-    res = bios_patch(pe_data, offset)
-    if res is None:
-        res = old_bios_patch(pe_data, offset)
-    pe_data = res
+    pe_data = bios_patch(pe_data, offset, text_start)
 
     return pe_data
 
