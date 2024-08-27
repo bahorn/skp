@@ -11,6 +11,10 @@ from binsearch import FixedBytes, BinSearch
 from pe import PERemoveSig, PECheckSumFix
 from remove_reloc import remove_reloc
 
+# entrypoints in our code.
+BIOS_START = 0
+UEFI_START = 32
+
 
 def assemble(code):
     ks = Ks(KS_ARCH_X86, KS_MODE_64)
@@ -51,7 +55,7 @@ def uefi_patch(pe_data, offset):
 
     target_jump_offset = matches[0][0]
     dist = offset - (target_jump_offset + total - 5)
-    dist += 32
+    dist += UEFI_START
     # note: we need to do the instructions we replaced in the next stage!!!
     transfer = pad(
         assemble(f'jmp {hex(dist)}'),
@@ -80,14 +84,9 @@ def bios_patch(pe_data, offset):
     if len(matches) == 0:
         return None
 
-    # Now we want to disable relocation so the kernel is always at its prefered
-    # address with various bootloaders.
-    pe_data[0x234] = 0
-    # And fix the prefered address.
-    pe_data[0x258:0x258 + 8] = struct.pack('<Q', 0x100_000)
-
     # Our takeover code.
-    target_addr = 0x100_000 + offset - 0x5000
+    # 0x5000 is the start of .text
+    target_addr = 0x100_000 + offset + BIOS_START - 0x5000
 
     # Jumping to an exact address
     to_patch_in = f"""
@@ -120,14 +119,9 @@ def old_bios_patch(pe_data, offset):
     print(matches)
     assert(len(matches) == 1)
 
-    # Now we want to disable relocation so the kernel is always at its prefered
-    # address with various bootloaders.
-    pe_data[0x234] = 0
-    # And fix the prefered address.
-    pe_data[0x258:0x258 + 8] = struct.pack('<Q', 0x100_000)
-
     # Our takeover code.
-    target_addr = 0x100_000 + offset - 0x3800
+    # this comes from the start of .text
+    target_addr = 0x100_000 + offset + BIOS_START - 0x3800
 
     # Jumping to an exact address
     to_patch_in = f"""
@@ -211,6 +205,12 @@ def add_data(pe_data_orig, data):
     # ptr raw data
     pe_data[last_offset + 20:last_offset + 20 + 4] = \
         struct.pack('<I', offset)
+
+    # Now we want to disable relocation so the kernel is always at its prefered
+    # address with various bootloaders.
+    pe_data[0x234] = 0
+    # And fix the prefered address.
+    pe_data[0x258:0x258 + 8] = struct.pack('<Q', 0x100_000)
 
     # Our UEFI Patch to transfer control
     # pe_data = uefi_patch(pe_data, uefi_offset)
