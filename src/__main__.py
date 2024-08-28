@@ -10,10 +10,13 @@ from keystone import Ks, KS_ARCH_X86, KS_MODE_64, KS_OPT_SYNTAX_ATT
 from binsearch import FixedBytes, BinSearch
 from pe import PERemoveSig, PECheckSumFix
 from remove_reloc import remove_reloc
+from badlink import BadLink
 
 # entrypoints in our code.
 BIOS_START = 0
 UEFI_START = 32
+
+PAGE_SIZE = 4096
 
 
 def assemble(code):
@@ -23,7 +26,12 @@ def assemble(code):
     return bytes(encoding)
 
 
-def pad(data, padding=4096, before=False, value=b'\x00'):
+def pad_size(dlen, padding=PAGE_SIZE):
+    extra = padding - (dlen % padding)
+    return dlen + extra
+
+
+def pad(data, padding=PAGE_SIZE, before=False, value=b'\x00'):
     extra = padding - (len(data) % padding)
 
     if before:
@@ -32,7 +40,7 @@ def pad(data, padding=4096, before=False, value=b'\x00'):
     return data + extra * value
 
 
-def to_page_count(value, page_size=4096):
+def to_page_count(value, page_size=PAGE_SIZE):
     return math.ceil(value / page_size)
 
 
@@ -59,6 +67,29 @@ def uefi_patch(pe_data, offset):
     # note: we need to do the instructions we replaced in the next stage!!!
     transfer = pad(
         assemble(f'jmp {hex(dist)}'),
+        total, before=True, value=b'\x90'
+    )
+    pe_data[target_jump_offset:target_jump_offset+total] = transfer
+    return pe_data
+
+
+def dev_patch(pe_data, offset):
+    bs = BinSearch([
+        FixedBytes(b"\x48\x83\xE4\xF0\x48\x89\xD3"),
+    ])
+    total = 4 + 3
+    matches = bs.search(pe_data)
+
+    assert(len(matches) == 1)
+    print(matches)
+
+    target_jump_offset = matches[0][0]
+    dist = offset - (target_jump_offset + total - 5)
+    dist += UEFI_START
+    print('d', dist)
+    # note: we need to do the instructions we replaced in the next stage!!!
+    transfer = pad(
+        assemble(f'self: jmp self'),
         total, before=True, value=b'\x90'
     )
     pe_data[target_jump_offset:target_jump_offset+total] = transfer
@@ -145,14 +176,18 @@ def add_data(pe_data_orig, data):
     Add a new section to store our patch in the PE, then append our data, and
     install the patches to transfer control to our payload.
     """
+    bl = BadLink(data)
+    # We can fetch the real entrypoints like this:
+    # UEFI_START = bl.get_key(b'uefi_e\x00')
+    # BIOS_START = bl.get_key(b'bios_e\x00')
 
-    to_add = pad(data, 4096)
+    to_add_size = pad_size(bl.size(), PAGE_SIZE)
 
     pe = pefile.PE(data=pe_data_orig)
 
     # Make the last sections raw size equal to its virtual size
     curr_virtual_size = pe.sections[-1].Misc_VirtualSize
-    pe.sections[-1].SizeOfRawData += 8192
+    pe.sections[-1].SizeOfRawData += PAGE_SIZE * 2
     curr_real_size = pe.sections[-1].SizeOfRawData
 
     assert(curr_real_size <= curr_virtual_size)
@@ -172,17 +207,33 @@ def add_data(pe_data_orig, data):
 
     # Now we update the headers
     pe.FILE_HEADER.NumberOfSections += 1
-    pe.OPTIONAL_HEADER.SizeOfImage += len(to_add)
+    pe.OPTIONAL_HEADER.SizeOfImage += to_add_size
     pe.OPTIONAL_HEADER.SizeOfCode = pe.OPTIONAL_HEADER.SizeOfImage
+    old_entrypoint = pe.OPTIONAL_HEADER.AddressOfEntryPoint
     pe_data = bytearray(pe.write())
 
     # Pad the last section with nulls so our code doesn't get trashed.
-    pe_data += b'\x00' * 8192
+    pe_data += b'\x00' * (PAGE_SIZE * 2)
     to_pad_with = curr_virtual_size - curr_real_size
 
-    # Now append our data
+    # Calculate things before appending our data
     offset = len(pe_data)
     uefi_offset = to_pad_with + offset
+
+    # Replacing the UEFI entrypoint
+    new_entrypoint = uefi_offset + bl.get_key(b'uefi_e\x00')
+    pe = pefile.PE(data=pe_data)
+    pe.OPTIONAL_HEADER.AddressOfEntryPoint = new_entrypoint
+    pe_data = bytearray(pe.write())
+
+    called_from = uefi_offset + bl.get_key_offset(b'uefi_o\x00') + 4
+    orig_entrypoint = old_entrypoint - called_from
+
+    # need to calculate an offset to use to call the old entrypoint
+    bl.set_key(b'uefi_o\x00', struct.pack('<i', orig_entrypoint))
+
+    # Finally, append our data.
+    to_add = pad(bl.get(), PAGE_SIZE)
     pe_data += to_add
 
     # Create new section based on .text, with the same permissions.
@@ -212,12 +263,17 @@ def add_data(pe_data_orig, data):
     pe_data[0x234] = 0
     # And fix the prefered address.
     pe_data[0x258:0x258 + 8] = struct.pack('<Q', 0x100_000)
+    # make the alignment and init_size really high
+    # pe_data[0x230:0x230 + 4] = struct.pack('<I', 0xf0_00_00_00)
+    # pe_data[0x260:0x260 + 4] = struct.pack('<I', 0xff_ff_ff_ff)
+    # pe_data[0x214:0x214+4] = struct.pack('<I', 0xf0_f0_f0_f0)
 
     # Our UEFI Patch to transfer control
     # pe_data = uefi_patch(pe_data, uefi_offset)
-
     # Our BIOS Patch to transfer control
-    pe_data = bios_patch(pe_data, offset, text_start)
+    # pe_data = bios_patch(pe_data, offset, text_start)
+
+    print(offset)
 
     return pe_data
 

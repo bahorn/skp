@@ -1,21 +1,61 @@
 BITS 64
+
+
+; This is a custom linking format just to make it easier to patch values in this
+; directly.
+_bad_link_header:
+    db "b4dl1nk", 0
+    dd (_bad_link_reloc_end - _bad_link_reloc_start) / 16
+    dd _badlink_end
+
+_bad_link_reloc_start:
+
+; uefi entrypoint
+    db "uefi_e", 0
+    db 0x20 ; offset type, for reading
+    dq _uefi_entry - _badlink_end
+
+; bios entrypoint
+    db "bios_e", 0
+    db 0x20 ; offset type for reading.
+    dq _bios_entry - _badlink_end
+
+; original uefi entrypoint
+    db "uefi_o", 0
+    db 0x14
+    dq _original_uefi_offset - _badlink_end
+
+_bad_link_reloc_end:
+
+    align 64, db 0x00
+
+_badlink_end:
+
+
+
 ; Several ways we can reach this code, we just keep them at fixed offsets so we
 ; can adjust our patches to use them.
-
 
 _bios_entry:
     jmp _start
 
     align 32, db 0xff
 
+; Our goal here is to hook exit_boot_services, then continue boot as normal.
 _uefi_entry:
+    ; jmp _uefi_entry
+; lets call the original entrypoint
+    db 0xe8
+; call offset
+_original_uefi_offset:
+    db 0x00, 0x00, 0x00, 0x00
+
+    align 32, db 0xff
 ; just some instructions we patched out, doing it here to make the patch
 ; cleaner.
     mov rsi, rbx
     add rax, rcx
-
-
-
+    
 ; Now onto our real start:
 _start:
     ; align 8192, db 0x90
