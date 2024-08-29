@@ -17,7 +17,6 @@ EFI_BOOT_SERVICES *bootservices = 0x41424344;
 int called = 0;
 
 
-
 int compare(char a, char b)
 {
     return a == b;
@@ -34,12 +33,10 @@ void *memcpy(void *dest, const void *src, int n)
     return dest;
 }
 
-
 /* Check if this address is mapped, and a valid entrypoint */
-int check_address(void *addr)
+int check_address(void *addr, UINT64 pc)
 {
     char *to_test = addr;
-
     // Some fixed values we know from startup_32
     if (!compare(to_test[0], 0xfc)) {
         return 0;
@@ -70,10 +67,7 @@ EFI_STATUS exit_bootservices_hook(EFI_HANDLE ImageHandle, UINTN MapKey)
         goto done;
     }
     called = 1;
-    // We are using this to read out of bounds and check the contents of the
-    // stack.
-    void *test = &ImageHandle;
-
+    
     // Lets get the memory map
     UINTN mapsize = 0, mapkey, descriptorsize;
     EFI_MEMORY_DESCRIPTOR *map = NULL;
@@ -86,13 +80,13 @@ EFI_STATUS exit_bootservices_hook(EFI_HANDLE ImageHandle, UINTN MapKey)
         &descriptorsize,
         &descriptorversion
     );
-    
+
+    mapsize = mapsize + descriptorsize * 10;
     bootservices->AllocatePool(
         EfiBootServicesData,
-        mapsize + descriptorsize * 2,
+        mapsize,
         (void **)&map
     );
-    mapsize = mapsize + descriptorsize * 2;
 
     bootservices->GetMemoryMap(
         &mapsize,
@@ -103,18 +97,18 @@ EFI_STATUS exit_bootservices_hook(EFI_HANDLE ImageHandle, UINTN MapKey)
     );
 
     int count = mapsize / descriptorsize;
-    count += 2;
-    int j = 0;
     /* Now we have the memory map, lets hunt */
     for (int i = 0; i < count; i++) {
-        EFI_MEMORY_DESCRIPTOR curr = map[i];
-        if (curr.Type != 1) {
+        EFI_MEMORY_DESCRIPTOR *curr = \
+            (EFI_MEMORY_DESCRIPTOR *)((UINT8 *)map + i * descriptorsize);
+        
+        if (curr->Type != EfiLoaderCode) {
             continue;
         }
-
-        if (check_address(curr.PhysicalStart)) {
+        
+        if (check_address(curr->PhysicalStart, curr->NumberOfPages)) {
             /* + 0x80 as that is startup_64 */
-            apply_patch(curr.PhysicalStart + _startup_64);
+            apply_patch(curr->PhysicalStart + _startup_64);
             goto done;
         }
     }
@@ -125,8 +119,7 @@ EFI_STATUS exit_bootservices_hook(EFI_HANDLE ImageHandle, UINTN MapKey)
      *
      * Probably gonna need to allocate runtime memory here.
      */
-
-     while (1) {}
+    while (1) {}
 
 done:
     if (map != NULL) {
