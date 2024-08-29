@@ -1,4 +1,4 @@
-CFLAGS=-fPIE -fno-builtin -nostdlib -fno-plt -O2 -I/usr/include/efi -mabi=ms
+CFLAGS=-fPIE -fno-builtin -nostdlib -fno-plt -O0 -I/usr/include/efi -mabi=ms
 LDFLAGS=-T./linker.lds -pie
 
 build:
