@@ -8,4 +8,5 @@ __pycache__
 *.bin
 generated
 payload.h
+stage1.h
 intermediate

@@ -83,7 +83,7 @@ LDFLAGS=-T ./linker.lds -pie
 CC=gcc
 LD=ld
 
-build: stage1.bin
+build: $(OUT)
 
 src/entry.s:
 	$(CC) -o src/entry.s $(CFLAGS) src/entry.c

