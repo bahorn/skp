@@ -49,19 +49,6 @@ int check_address(void *addr)
         return 0;
     }
 
-    // Now startup_64 for our actual entrypoint
-    if (!compare(to_test[0x80], 0x49)) {
-        return 0;
-    }
-
-    if (!compare(to_test[0x81],0x89)) {
-        return 0;
-    }
-
-    if (!compare(to_test[0x82], 0xf7)) {
-        return 0;
-    }
-
     return 1;
 }
 
@@ -127,7 +114,7 @@ EFI_STATUS exit_bootservices_hook(EFI_HANDLE ImageHandle, UINTN MapKey)
 
         if (check_address(curr.PhysicalStart)) {
             /* + 0x80 as that is startup_64 */
-            apply_patch(curr.PhysicalStart + 0x80);
+            apply_patch(curr.PhysicalStart + _startup_64);
             goto done;
         }
     }
@@ -138,6 +125,8 @@ EFI_STATUS exit_bootservices_hook(EFI_HANDLE ImageHandle, UINTN MapKey)
      *
      * Probably gonna need to allocate runtime memory here.
      */
+
+     while (1) {}
 
 done:
     if (map != NULL) {
