@@ -44,58 +44,6 @@ def to_page_count(value, page_size=PAGE_SIZE):
     return math.ceil(value / page_size)
 
 
-def uefi_patch(pe_data, offset):
-    # Replacing a jump, trashing some error handling code that shouldn't really
-    # happen.
-
-    # mov rsi, rbx
-    # add rax, rcx
-    # jmp rax
-    bs = BinSearch([
-        FixedBytes(b'\x48\x89\xDE'),
-        FixedBytes(b'\x48\x01\xC8'),
-        FixedBytes(b'\xFF\xE0')
-    ])
-    total = 3 + 3 + 2
-    matches = bs.search(pe_data)
-
-    assert(len(matches) == 1)
-
-    target_jump_offset = matches[0][0]
-    dist = offset - (target_jump_offset + total - 5)
-    dist += UEFI_START
-    # note: we need to do the instructions we replaced in the next stage!!!
-    transfer = pad(
-        assemble(f'jmp {hex(dist)}'),
-        total, before=True, value=b'\x90'
-    )
-    pe_data[target_jump_offset:target_jump_offset+total] = transfer
-    return pe_data
-
-
-def dev_patch(pe_data, offset):
-    bs = BinSearch([
-        FixedBytes(b"\x48\x83\xE4\xF0\x48\x89\xD3"),
-    ])
-    total = 4 + 3
-    matches = bs.search(pe_data)
-
-    assert(len(matches) == 1)
-    print(matches)
-
-    target_jump_offset = matches[0][0]
-    dist = offset - (target_jump_offset + total - 5)
-    dist += UEFI_START
-    print('d', dist)
-    # note: we need to do the instructions we replaced in the next stage!!!
-    transfer = pad(
-        assemble(f'self: jmp self'),
-        total, before=True, value=b'\x90'
-    )
-    pe_data[target_jump_offset:target_jump_offset+total] = transfer
-    return pe_data
-
-
 def bios_patch(pe_data, offset, text_offset=0x5000):
     # Patching for BIOS
     # targetting the end of startup_64, in Lrelocated
@@ -268,8 +216,9 @@ def add_data(pe_data_orig, data):
     # pe_data[0x260:0x260 + 4] = struct.pack('<I', 0xff_ff_ff_ff)
     # pe_data[0x214:0x214+4] = struct.pack('<I', 0xf0_f0_f0_f0)
 
-    # Our UEFI Patch to transfer control
-    # pe_data = uefi_patch(pe_data, uefi_offset)
+    # We do not need to do any more for UEFI as we already hooked it's
+    # entrypoint, but need to now deal with BIOS.
+
     # Our BIOS Patch to transfer control
     # pe_data = bios_patch(pe_data, offset, text_start)
 

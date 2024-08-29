@@ -1,7 +1,7 @@
 PATCHED_KERNEL=./sample-kernels/patch-kernel.bzimage
 SOURCE_KERNEL=./sample-kernels/vmlinuz-6.8.0-41-generic
 # SOURCE_KERNEL=/media/a/misc/git/tmpout-submissions/easylkb/kernel/linux-6.8/arch/x86/boot/bzImage
-# SOURCE_KERNEL=./sample-kernels/vmlinuz-5.15.0-117-generic
+SOURCE_KERNEL=./sample-kernels/vmlinuz-5.15.0-117-generic
 ROOTFS=./sample-kernels/openwrt-23.05.4-x86-64-generic-ext4-rootfs.img
 
 PAYLOAD=`pwd`/../klude2/artifacts/main.bin

