@@ -10,14 +10,14 @@ _to_restore:
     dq 0
 
 _entry:
-
 ; Read the top of the stack to get where we are called from
 ; This will be __efi_call + 40, so we can use this to get back to _text, which
-; we need to pass to 
-    pop rax
-    push rax
+    mov rax, [rsp]
     sub rax, __efi_call + 40
 
+    push rbp
+    mov rbp, rsp
+    sub rsp, 0x40 
 ; Now do the usual register preservation
     push rcx
     push rdx
@@ -26,15 +26,10 @@ _entry:
     push r10
     push r11
 
-; call our hook to setup our payload.
-    push rax
-    push rdi
     mov rdi, rax
     call _runtime_hook
 
 ; get the registers back to normal
-    pop rdi
-    pop rax
     pop r11
     pop r10
     pop r9
@@ -42,14 +37,17 @@ _entry:
     pop rdx
     pop rcx
 
+    leave
+
 ; restore and call the original entry now that we've done own work.
     mov rax, [rel _original]
     push rbx
     mov rbx, [rel _to_restore]
     mov [rbx], rax
     pop rbx
-    push rax
-    ret
+    jmp rax
+
+    align 32, db 0
 
 ; We just append this.
 _runtime_hook:

