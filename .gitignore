@@ -11,4 +11,4 @@ payload.h
 stage1.h
 intermediate
 thunk
-payload/runtime_hook/runtime.h
+payload/stage2-kshelf-loader/runtime.h

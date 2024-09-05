@@ -1,6 +1,4 @@
-OUT=stage1.bin
-CFLAGS=-S \
-	   -O0 \
+CFLAGS=-O0 \
 	   -fPIE \
 	   -fno-builtin \
 	   -nostdlib \
@@ -83,26 +81,24 @@ LDFLAGS=-T ./linker.lds -pie
 CC=gcc
 LD=ld
 
-build: $(OUT)
 
-src/entry.s:
-	$(CC) -o src/entry.s $(CFLAGS) src/entry.c
+build:
+	$(CC) \
+		$(CFLAGS) \
+		-D KALLSYMS_OFFSET=`python3 ../../src/find_symbol.py $(SYMBOLS) kallsyms_lookup_name` \
+		-c ./src/entry.c -o main.o
+	$(LD) $(LDFLAGS) ./main.o -o runtime_hook.bin
 
-src/main.s:
-	$(CC) -o src/main.s $(CFLAGS) src/main.c
-
-src/entry.o: src/entry.s
-	$(AS) $(ASFLAGS) -o src/entry.o src/entry.s
-
-src/main.o: src/main.s
-	$(AS) $(ASFLAGS) -o src/main.o src/main.s
-
-$(OUT): src/entry.o src/main.o
-	mkdir -p generated
-	python3 ./scripts/symbol_offsets.py $(SYMBOLS) > generated/offsets.lds
-	echo LOAD_OFFSET = $(LOAD_OFFSET)\; > generated/load.lds
-	$(LD) -o $(OUT) $(LDFLAGS) src/*.o
+	nasm \
+		-D __efi_call=`python3 ../../src/find_symbol.py $(SYMBOLS) __efi_call` \
+		-D _stage1_offset=$(LOAD_OFFSET) \
+		-D _startup_64_offset=`python3 ../../src/find_symbol.py $(SYMBOLS) startup_64` \
+		-D runtime_hook_len=`wc -c < ./runtime_hook.bin` \
+		-D _initcall_offset=`python3 ../../src/find_initcall.py $(SYMBOLS)` \
+		-f bin ./thunk.asm \
+		-o thunk.bin
+	cat ./thunk.bin ./runtime_hook.bin > runtime.bin
+	xxd -i runtime.bin > runtime.h
 
 clean:
-	-rm src/*.o src/*.s $(OUT)
-	-rm -r generated
+	-rm thunk.bin runtime.h main.o runtime_hook.bin runtime.bin

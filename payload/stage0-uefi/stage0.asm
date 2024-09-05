@@ -16,9 +16,10 @@ _bad_link_reloc_start:
     dq _uefi_entry - _badlink_end
 
 ; bios entrypoint
+; adjusted later on.
     db "bios_e", 0
     db 0x20 ; offset type for reading.
-    dq _bios_entry - _badlink_end
+    dq 0
 
 ; original uefi entrypoint
     db "uefi_o", 0
@@ -30,15 +31,6 @@ _bad_link_reloc_end:
     align 64, db 0x00
 
 _badlink_end:
-
-
-; Several ways we can reach this code, we just keep them at fixed offsets so we
-; can adjust our patches to use them.
-
-_bios_entry:
-    jmp _bios_entry
-
-    align 32, db 0xff
 
 ; Our goal here is to hook exit_boot_services, then continue boot as normal.
 _uefi_entry:

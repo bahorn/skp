@@ -9,7 +9,6 @@ Doesn't touch UEFI, no secureboot bypasses here.
 
 read the source, this ain't a something simple to use.
 
-
 Setup:
 ```
 make setup
@@ -29,17 +28,18 @@ Then `make run-ovmf` or `make run-bios` to test it out.
 
 ## Techniques
 
+Both the UEFI and BIOS paths are patched into the kernel.
+Both routes will load a kSHELF, which is a type of kernel module I developed to
+avoid having a module loaded.
+It is just vmalloc()'d in.
+
 
 ### UEFI
 
-(only kernels >6.6 currently)
-
-
-Creates a new PE section called .patch, and expands the previous one to make the
-raw size match the virtual size.
-
-Then it patches code that jumps to the kernel right after decompression.
-We apply our kernel patches here, then jump to it.
+First, we hook the UEFI entrypoint to install a hook on ExitBootServices(),
+which will then either directly patch the kernel post decompression (post 6.6
+kernels) or install a UEFI runtime hook that will be ran during the kernels
+boot.
 
 
 ### BIOS
@@ -53,11 +53,11 @@ appended data from being accessed relatively.
 But there remains the mapping at 0x100_000 we can still use, which is where we
 call our patcher from.
 
+Our code here will then copy the remaining data into a known cavity in the
+kernel image.
 
-## Notes
 
-Heavily relies on pattern matching ASM, some from compilers.
-Would rather not, but kinda had to in some cases.
+### Layout
 
-There are edge cases! This will make boxes unbootable if you actually try to use
-it!
+We merge all our stages into a single blob that will get appended to the kernel
+image, correcting the PE/COFF headers to be bootable via UEFI.

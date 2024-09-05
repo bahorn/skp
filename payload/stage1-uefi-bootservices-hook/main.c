@@ -4,8 +4,7 @@
  */
 #include <efi.h>
 #include <efilib.h>
-#include "../stage1.h"
-#include "../runtime_hook/runtime.h"
+#include "../stage2-kshelf-loader/runtime.h"
 
 // How far we want to go looking for the entrypoint.
 #define MAX_DEPTH 4096
@@ -33,6 +32,8 @@ void *memcpy(void *dest, const void *src, int n)
     }
     return dest;
 }
+
+#ifdef DIRECT_PATCHING
 
 /* Check if this address is mapped, and a valid entrypoint */
 int check_address(void *addr, UINT64 pc)
@@ -119,6 +120,7 @@ int try_direct_patching()
     return res;
 }
 
+#endif
 
 void install_runtime_hook()
 {
@@ -154,10 +156,16 @@ EFI_STATUS exit_bootservices_hook(EFI_HANDLE ImageHandle, UINTN MapKey)
     }
     called = 1;
 
+#ifdef DIRECT_PATCHING
+    if (!try_direct_patch())
+        install_runtime_hook();
+#else
     install_runtime_hook();
-    
+#endif
+
 done:
-    return orig_exitbootservices(ImageHandle, MapKey);
+    EFI_STATUS ret = orig_exitbootservices(ImageHandle, MapKey);
+    return ret;
 }
 
 

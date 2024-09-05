@@ -10,6 +10,7 @@ typedef int (*_printk_t)(const char *fmt, ...);
 typedef void *(*vmalloc_t)(unsigned long size);
 typedef int *(*set_memory_x_t)(unsigned long addr, int numpages);
 typedef int *(*set_memory_ro_t)(unsigned long addr, int numpages);
+typedef int (*regulator_init_complete_t)(void);
 
 
 kallsyms_lookup_name_t kallsyms_lookup_name;
@@ -17,6 +18,7 @@ _printk_t _printk;
 vmalloc_t vmalloc;
 set_memory_x_t set_memory_x;
 set_memory_ro_t set_memory_ro;
+regulator_init_complete_t regulator_init_complete;
 
 size_t get_n_pages(size_t n);
 bool do_relocs(void *elf);
@@ -156,7 +158,7 @@ dt_end:
                     (unsigned long *)(elf + rela[i].r_offset);
                 memcpy(
                     to_patch,
-                    sym_addr,
+                    (void *)sym_addr,
                     symtab[sym_idx].st_size
                 );
                 break;
@@ -243,7 +245,7 @@ void run_elf(void *elf, size_t len)
 
 /* Takes just the address of the _text section */
 __attribute__ ((section(".text.start")))
-void _start(unsigned long text)
+void _start(unsigned long text, int via_initcall)
 {
     kallsyms_lookup_name = (kallsyms_lookup_name_t) ((void *)text + KALLSYMS_OFFSET);
     _printk = (_printk_t) kallsyms_lookup_name("_printk");
@@ -251,8 +253,23 @@ void _start(unsigned long text)
     set_memory_ro = (set_memory_ro_t) kallsyms_lookup_name("set_memory_ro");
     set_memory_x = (set_memory_x_t) kallsyms_lookup_name("set_memory_x");
 
+    if (vmalloc == NULL || set_memory_ro == NULL || set_memory_x == NULL) {
+        _printk("Can't get Symbol?\n");
+    }
+
     _printk("PATCHED KERNEL\n");
+
+    /* If we are called via a patched initcall, we need to call it back */
+    if (via_initcall) {
+        _printk("Called via initcall\n");
+        regulator_init_complete = 
+            (regulator_init_complete_t) kallsyms_lookup_name("regulator_init_complete");
+        regulator_init_complete();
+    } else {
+        _printk("Called via UEFI Runtime hook\n");
+
+    }
+
     run_elf(payload, payload_len);
-    //while (1) {}
     return;
 }
