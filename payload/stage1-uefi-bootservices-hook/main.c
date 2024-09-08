@@ -6,10 +6,6 @@
 #include <efilib.h>
 #include "../stage2-kshelf-loader/runtime.h"
 
-// How far we want to go looking for the entrypoint.
-#define MAX_DEPTH 4096
-
-
 // Want it pre-initialized
 EFI_EXIT_BOOT_SERVICES orig_exitbootservices = 0x41424344;
 EFI_SYSTEM_TABLE *systable = 0x41424344;

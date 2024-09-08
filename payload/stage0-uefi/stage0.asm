@@ -26,6 +26,27 @@ _bad_link_reloc_start:
     db 0x14
     dq _original_uefi_offset - _badlink_end
 
+; Offset to our _code32 hook
+    db "code32", 0
+    db 0x20
+    dq _code32_hook - _badlink_end
+
+    db "o_dest", 0
+    db 0x14
+    dq _offset_dest - _badlink_end
+
+    db "o_bios", 0
+    db 0x14
+    dq _offset_bios_entry - _badlink_end
+
+    db "o_tocp", 0
+    db 0x14
+    dq _offset_to_copy - _badlink_end
+
+    db "o_ptch", 0
+    db 0x20
+    dq _to_copy - _badlink_end
+
 _bad_link_reloc_end:
 
     align 64, db 0x00
@@ -53,5 +74,9 @@ _original_uefi_offset:
     db 0x00, 0x00, 0x00, 0x00
 
     align 32, db 0xff
+
+
+
+%include "./code32.asm"
 
 _our_hook:

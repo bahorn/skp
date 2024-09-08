@@ -50,7 +50,10 @@ _uefi_entry:
 
     align 32, db 0
 
-; marker just to make building this easier, as we can get the offset via this.
+
+    BITS 64
+
+; marker to find the bios entry
     dd 0x41424344
     db "hack the planet", 0
     dd 0x61626364

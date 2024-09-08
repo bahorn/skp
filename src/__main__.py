@@ -76,13 +76,13 @@ def bios_patch(pe_data, offset, text_offset=0x5000, bios_start=0):
     ]
 
     match_offset = 0
-    total = 0
+    # total = 0
     matches = []
 
     for pattern in patterns:
         bs = BinSearch(pattern['pattern'])
         match_offset = pattern['offset']
-        total = pattern['total']
+        # total = pattern['total']
         matches = bs.search(pe_data)
 
         if len(matches) == 1:
@@ -97,23 +97,23 @@ def bios_patch(pe_data, offset, text_offset=0x5000, bios_start=0):
     target_addr = 0x100_000 + offset + bios_start - text_offset
 
     # Jumping to an exact address
-    to_patch_in = f"""
-        pushq ${hex(target_addr)}
-        ret
-    """
+    # to_patch_in = f"""
+    #     pushq ${hex(target_addr)}
+    #     ret
+    # """
 
-    patch = assemble(to_patch_in)
-    assert(len(patch) < total)
+    # patch = assemble(to_patch_in)
+    # assert(len(patch) < total)
 
     # we'll be jumping back down to an old mapping at a fixed address.
-    start = matches[0][0] + match_offset
-    end = matches[0][0] + total + match_offset
-    pe_data[start:end] = pad(
-        patch,
-        total, before=True, value=b'\x90'
-    )
+    start = 0x100_000 + matches[0][0] + match_offset - text_offset
+    # end = matches[0][0] + total + match_offset
+    # pe_data[start:end] = pad(
+    #    patch,
+    #    total, before=True, value=b'\x90'
+    # )
 
-    return pe_data
+    return (start, target_addr)
 
 
 def add_data(pe_data_orig, data):
@@ -124,6 +124,7 @@ def add_data(pe_data_orig, data):
     bl = BadLink(data)
     # We can fetch the real entrypoints like this:
     bios_start = bl.get_key(b'bios_e\x00')
+    _code32 = bl.get_key(b'code32\x00')
 
     to_add_size = pad_size(bl.size(), PAGE_SIZE)
 
@@ -157,7 +158,7 @@ def add_data(pe_data_orig, data):
     pe_data = bytearray(pe.write())
 
     # Pad the last section with nulls so our code doesn't get trashed.
-    pe_data += b'\x00' * (PAGE_SIZE * 2)
+    pe_data += b'\x00' * (PAGE_SIZE * 1)
     to_pad_with = curr_virtual_size - curr_real_size
 
     # Calculate things before appending our data
@@ -175,6 +176,15 @@ def add_data(pe_data_orig, data):
 
     # need to calculate an offset to use to call the old entrypoint
     bl.set_key(b'uefi_o\x00', struct.pack('<i', orig_entrypoint))
+
+    k = 0x100_000 + offset + bl.get_key(b'o_ptch\x00') - text_start
+    bl.set_key(b'o_tocp\x00', struct.pack('<I', k))
+
+    # need to set the offsets we use patch the bios.
+    b_start, b_dest = bios_patch(pe_data, offset, text_start, bios_start)
+    print(b_start, b_dest)
+    bl.set_key(b'o_bios\x00', struct.pack('<I', b_dest))
+    bl.set_key(b'o_dest\x00', struct.pack('<I', b_start))
 
     # Finally, append our data.
     to_add = pad(bl.get(), PAGE_SIZE)
@@ -213,9 +223,12 @@ def add_data(pe_data_orig, data):
     # entrypoint, but need to now deal with BIOS.
 
     # Our BIOS Patch to transfer control
-    pe_data = bios_patch(pe_data, offset, text_start, bios_start)
+    new_code32 = 0x100_000 + offset + _code32 - text_start
+    print(new_code32)
+    pe_data[0x214:0x214 + 4] = struct.pack('<I', new_code32)
+    # pe_data = bios_patch(pe_data, offset, text_start, bios_start)
 
-    print(offset)
+    # print(offset)
 
     return pe_data
 
