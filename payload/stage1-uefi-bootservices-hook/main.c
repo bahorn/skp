@@ -7,9 +7,9 @@
 #include "../stage2/runtime.h"
 
 // Want it pre-initialized
-EFI_EXIT_BOOT_SERVICES orig_exitbootservices = 0x41424344;
-EFI_SYSTEM_TABLE *systable = 0x41424344;
-EFI_BOOT_SERVICES *bootservices = 0x41424344;
+EFI_EXIT_BOOT_SERVICES orig_exitbootservices = (EFI_EXIT_BOOT_SERVICES) 0x41424344;
+EFI_SYSTEM_TABLE *systable = (EFI_SYSTEM_TABLE *) 0x41424344;
+EFI_BOOT_SERVICES *bootservices = (EFI_BOOT_SERVICES *) 0x41424344;
 int called = 0;
 
 
@@ -122,7 +122,10 @@ void install_runtime_hook()
 {
     char *data = NULL;
     EFI_STATUS status = bootservices->AllocatePages(
-        AllocateAnyPages, EfiRuntimeServicesCode, 0x300, &data
+        AllocateAnyPages,
+        EfiRuntimeServicesCode,
+        0x300,
+        (EFI_PHYSICAL_ADDRESS *) &data
     );
 
     if (status != EFI_SUCCESS) {
@@ -136,11 +139,11 @@ void install_runtime_hook()
     memcpy(data, (void *) &(systable->RuntimeServices->GetVariable), 8);
 
     /* -> Address of the field in the struct we replace */
-    UINT64 a = &(systable->RuntimeServices->GetVariable);
+    UINT64 a = (UINT64) &(systable->RuntimeServices->GetVariable);
     memcpy(data+8, (void *) &(a), 8);
 
     /* And hook! */
-    systable->RuntimeServices->GetVariable = data + 16;
+    systable->RuntimeServices->GetVariable = (EFI_GET_VARIABLE) data + 16;
 }
 
 

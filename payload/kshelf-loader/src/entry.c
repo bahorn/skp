@@ -74,6 +74,10 @@ size_t get_n_pages(size_t n)
 bool do_relocs(void *elf)
 {
     Elf64_Dyn *dyn = NULL;
+    Elf64_Rela *rela = NULL;
+    Elf64_Sym *symtab = NULL;
+    char *strtab = NULL;
+    uint64_t relasz = 0;
     int dynamic_tags = 0;
     Elf64_Ehdr *ehdr = (Elf64_Ehdr *) elf;
     for (uint16_t curr_ph = 0; curr_ph < ehdr->e_phnum; curr_ph++) {
@@ -84,11 +88,8 @@ bool do_relocs(void *elf)
         break;
     }
     if (dyn == NULL) return true;
+    
     /* Now we iterate through .dynamic looking for strtab, symtab, rela */
-    Elf64_Rela *rela = NULL;
-    Elf64_Sym *symtab = NULL;
-    char *strtab = NULL;
-    uint64_t relasz = 0;
     for (int i = 0; i < dynamic_tags; i++) {
         Elf64_Dyn *tag = &dyn[i];
         switch (tag->d_tag) {
@@ -193,12 +194,17 @@ void run_tha_fun(void (*fun)(void))
 /* process */
 void run_elf(void *elf, size_t len)
 {
+    typedef void (*start_t)(void);
+    start_t start;
+    Elf64_Ehdr *ehdr; 
+    Elf64_Phdr *phdr;
     size_t size = get_virtualsize(elf);
     void *body = vmalloc(size);
     /* First copy the ELF to a new location */
     memset(body, 0, size);
     memcpy(body, elf, len);
-    Elf64_Ehdr *ehdr = (Elf64_Ehdr *) body;
+    
+    ehdr = (Elf64_Ehdr *) body;
     /* Apply the relocations by searching through the PHDRs for a PT_DYNAMIC */
     if (!do_relocs(body)) {
         return;
@@ -207,11 +213,11 @@ void run_elf(void *elf, size_t len)
     /* Go through the program headers to set correct page permissions for each
      * PT_LOAD */
     for (uint16_t curr_ph = 0; curr_ph < ehdr->e_phnum; curr_ph++) {
-        Elf64_Phdr *phdr = body + ehdr->e_phoff  + curr_ph * ehdr->e_phentsize;
+        phdr = body + ehdr->e_phoff  + curr_ph * ehdr->e_phentsize;
         if (phdr->p_type != PT_LOAD)
             continue;
         
-        size_t size = get_n_pages(phdr->p_memsz);
+        size = get_n_pages(phdr->p_memsz);
         switch (phdr->p_flags & (PF_R | PF_W | PF_X)) {
             case PF_R | PF_W:
                 /* Default case, nothing needs to be done */
@@ -233,9 +239,8 @@ void run_elf(void *elf, size_t len)
 
 
     /* Transfer control */
-    typedef void (*start_t)(void);
     _printk("Entrypoint: %lx\n", body + ehdr->e_entry);
-    start_t start = (start_t)(body + ehdr->e_entry);
+    start = (start_t)(body + ehdr->e_entry);
 
     run_tha_fun(start);
 }
