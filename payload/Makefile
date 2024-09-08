@@ -1,7 +1,8 @@
 
 build:
 	../tools/xxd.py $(PAYLOAD) payload > ./payload.h
-	SYMBOLS=$(SYMBOLS) make -C stage2-kshelf-loader
+	SYMBOLS=$(SYMBOLS) make -C kshelf-loader
+	SYMBOLS=$(SYMBOLS) LOAD_OFFSET=$(LOAD_OFFSET) make -C ./stage2
 	SYMBOLS=$(SYMBOLS) LOAD_OFFSET=$(LOAD_OFFSET) make -C ./stage1-uefi-bootservices-hook
 	SYMBOLS=$(SYMBOLS) LOAD_OFFSET=$(LOAD_OFFSET) \
 			make -C ./stage0/
@@ -12,5 +13,6 @@ build:
 clean:
 	-rm all.bin payload.h
 	make -C ./stage0/ clean
-	make -C ./stage2-kshelf-loader/ clean
+	make -C ./kshelf-loader/ clean
+	make -C ./stage2 clean
 	make -C ./stage1-uefi-bootservices-hook clean

@@ -4,7 +4,7 @@
  */
 #include <efi.h>
 #include <efilib.h>
-#include "../stage2-kshelf-loader/runtime.h"
+#include "../stage2/runtime.h"
 
 // Want it pre-initialized
 EFI_EXIT_BOOT_SERVICES orig_exitbootservices = 0x41424344;
