@@ -246,7 +246,7 @@ def main():
     # this is the first stage that will patch the kernel after its been
     # decompressed, hooking an initcall and making sure our payload exists in
     # virtual memory.
-    payload = open('./payload/all.bin', 'rb').read()
+    payload = open('./src/runtime/all.bin', 'rb').read()
     a = add_data(
         a,
         pad(payload, value=b'\x00')
