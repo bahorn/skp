@@ -3,8 +3,8 @@ LDFLAGS=-T./linker.lds -pie
 
 build:
 	$(CC) \
-		-D _initcall_offset=`python3 ../../src/find_initcall.py $(SYMBOLS)` \
-		-D _startup_64=`python3 ../../src/find_symbol.py $(SYMBOLS) startup_64` \
+		-D _initcall_offset=`python3 ../../src/scripts/find_initcall.py $(SYMBOLS)` \
+		-D _startup_64=`python3 ../../src/scripts/find_symbol.py $(SYMBOLS) startup_64` \
 		-DLOAD_OFFSET=$(LOAD_OFFSET) \
 		$(CFLAGS) \
 		-c main.c -o main.o

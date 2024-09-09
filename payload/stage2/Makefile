@@ -1,10 +1,10 @@
 build:
 	nasm \
-		-D __efi_call=`python3 ../../src/find_symbol.py $(SYMBOLS) __efi_call` \
+		-D __efi_call=`python3 ../../src/scripts/find_symbol.py $(SYMBOLS) __efi_call` \
 		-D _stage1_offset=$(LOAD_OFFSET) \
-		-D _startup_64_offset=`python3 ../../src/find_symbol.py $(SYMBOLS) startup_64` \
+		-D _startup_64_offset=`python3 ../../src/scripts/find_symbol.py $(SYMBOLS) startup_64` \
 		-D runtime_hook_len=`wc -c < ../kshelf-loader/runtime_hook.bin` \
-		-D _initcall_offset=`python3 ../../src/find_initcall.py $(SYMBOLS)` \
+		-D _initcall_offset=`python3 ../../src/scripts/find_initcall.py $(SYMBOLS)` \
 		-f bin ./thunk.asm \
 		-o thunk.bin
 

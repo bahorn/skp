@@ -61,11 +61,11 @@ build: clean
 	# compile the payload
 	PAYLOAD=$(PAYLOAD) \
 		SYMBOLS=`pwd`/intermediate/kallsyms \
-		LOAD_OFFSET=`python3 ./src/find_space.py ./intermediate/curr.elf` \
+		LOAD_OFFSET=`python3 ./src/scripts/find_space.py ./intermediate/curr.elf` \
 		make -C ./payload/
 
 	# Patch the kernel image to install the payload
-	python3 src $(SOURCE_KERNEL) $(PATCHED_KERNEL)
+	python3 src/patch-bzimage $(SOURCE_KERNEL) $(PATCHED_KERNEL)
 
 clean:
 	make -C ./payload/ clean

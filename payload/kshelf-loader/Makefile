@@ -85,7 +85,7 @@ LD=ld
 build:
 	$(CC) \
 		$(CFLAGS) \
-		-D KALLSYMS_OFFSET=`python3 ../../src/find_symbol.py $(SYMBOLS) kallsyms_lookup_name` \
+		-D KALLSYMS_OFFSET=`python3 ../../src/scripts/find_symbol.py $(SYMBOLS) kallsyms_lookup_name` \
 		-c ./src/entry.c -o main.o
 	$(LD) $(LDFLAGS) ./main.o -o runtime_hook.bin
 
