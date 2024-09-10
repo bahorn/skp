@@ -5,6 +5,7 @@ import pefile
 
 DE_SECURITY = 4
 
+
 class PERemoveSig:
     def __init__(self, pedata):
         self._data = pedata
