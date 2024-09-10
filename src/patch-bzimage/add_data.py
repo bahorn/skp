@@ -4,7 +4,8 @@ Function to append data to a kernel bzImage, and add apply our hooks.
 import struct
 import pefile
 from badlink import BadLink
-from utils import PAGE_SIZE, pad_size, pad
+from consts import PAGE_SIZE
+from utils import pad_size, pad
 from bios import bios_patch
 
 

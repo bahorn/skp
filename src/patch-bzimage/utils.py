@@ -1,4 +1,4 @@
-PAGE_SIZE = 4096
+from consts import PAGE_SIZE
 
 
 def pad_size(dlen, padding=PAGE_SIZE):
