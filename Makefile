@@ -51,26 +51,8 @@ run-bios: build
 
 build: clean
 	mkdir ./intermediate
-	# extract kallsyms
-	kallsyms-finder $(SOURCE_KERNEL) > intermediate/kallsyms
-
-	# extract the kernel so we can find an offset to copy out payload to in the
-	# kernel image.
-	./tools/extract-vmlinux $(SOURCE_KERNEL) > ./intermediate/curr.elf
-
-	# compile the payload
-	PAYLOAD=$(PAYLOAD) \
-		SYMBOLS=`pwd`/intermediate/kallsyms \
-		LOAD_OFFSET=`python3 ./src/scripts/find_space.py ./intermediate/curr.elf` \
-		make -C ./src/runtime
-
-	cp ./src/runtime/all.bin ./intermediate/all.bin
-
-	# Patch the kernel image to install the payload
-	python3 src/patch-bzimage \
-		$(SOURCE_KERNEL) \
-		./intermediate/all.bin \
-		$(PATCHED_KERNEL)
+	./src/skp.sh \
+		$(SOURCE_KERNEL) $(PAYLOAD) `pwd`/intermediate $(PATCHED_KERNEL)
 
 clean:
 	make -C ./src/runtime/ clean
