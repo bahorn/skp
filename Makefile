@@ -22,20 +22,6 @@ run-ovmf: build
 		-monitor tcp:127.0.0.1:55555,server,nowait \
 		-netdev user,id=network0 -device e1000,netdev=network0,mac=52:54:00:12:34:56
 
-run-ovmf-just:
-	qemu-system-x86_64 \
-		-accel kvm \
-		-smbios type=0,uefi=on \
-        -bios /usr/share/ovmf/OVMF.fd \
-		-hda $(ROOTFS) \
-		-m 4G \
-		-kernel $(PATCHED_KERNEL) \
-		-nographic \
-		-gdb tcp::1234 \
-		-append "console=ttyS0,9600 root=/dev/sda" \
-		-monitor tcp:127.0.0.1:55555,server,nowait \
-		-netdev user,id=network0 -device e1000,netdev=network0,mac=52:54:00:12:34:56
-
 run-bios: build
 	qemu-system-x86_64 \
 		-accel kvm \
@@ -49,10 +35,13 @@ run-bios: build
 		-monitor tcp:127.0.0.1:55555,server,nowait \
 		-netdev user,id=network0 -device e1000,netdev=network0,mac=52:54:00:12:34:56
 
-build: clean
-	mkdir ./intermediate
+build:
+	mkdir -p `pwd`/intermediate/`shasum $(SOURCE_KERNEL) | cut -f 1 -d ' '`
 	./src/skp.sh \
-		$(SOURCE_KERNEL) $(PAYLOAD) `pwd`/intermediate $(PATCHED_KERNEL)
+		$(SOURCE_KERNEL) \
+		$(PAYLOAD) \
+		`pwd`/intermediate/`shasum $(SOURCE_KERNEL) | cut -f 1 -d ' '` \
+		$(PATCHED_KERNEL)
 
 clean:
 	make -C ./src/runtime/ clean

@@ -5,11 +5,16 @@ export REAL_PAYLOAD=$2
 export INTERMEDIATE=$3
 export PATCHED_KERNEL=$4
 # extract kallsyms
-kallsyms-finder $SOURCE_KERNEL > $INTERMEDIATE/kallsyms
+if [ ! -f $INTERMEDIATE/kallsyms ]; then
+    kallsyms-finder $SOURCE_KERNEL > $INTERMEDIATE/kallsyms
+fi
 
 # extract the kernel so we can find an offset to copy out payload to in the
 # kernel image.
-./tools/extract-vmlinux $SOURCE_KERNEL > $INTERMEDIATE/curr.elf
+#
+if [ ! -f $INTERMEDIATE/curr.elf ]; then
+    ./tools/extract-vmlinux $SOURCE_KERNEL > $INTERMEDIATE/curr.elf
+fi
 
 # compile the payload
 PAYLOAD=$REAL_PAYLOAD \
