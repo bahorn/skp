@@ -11,7 +11,7 @@ run-ovmf: build
 	qemu-system-x86_64 \
 		-accel kvm \
 		-smbios type=0,uefi=on \
-        -bios /usr/share/ovmf/OVMF.fd \
+		-bios /usr/share/ovmf/OVMF.fd \
 		-hda $(ROOTFS) \
 		-m 4G \
 		-kernel $(PATCHED_KERNEL) \
