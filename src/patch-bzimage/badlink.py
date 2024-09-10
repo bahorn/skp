@@ -123,5 +123,3 @@ class BadLink:
                 'dest': rdest,
                 'value': None
             }
-
-        print(self._kv)
