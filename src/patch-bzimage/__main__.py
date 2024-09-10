@@ -22,7 +22,7 @@ def main():
     # this is the first stage that will patch the kernel after its been
     # decompressed, hooking an initcall and making sure our payload exists in
     # virtual memory.
-    payload = open('./src/runtime/all.bin', 'rb').read()
+    payload = open(sys.argv[2], 'rb').read()
     a = add_data(
         a,
         pad(payload, value=b'\x00')
@@ -32,7 +32,7 @@ def main():
     # need to fix the bzImage checksum. Nothing really checks it, but lets do
     # it for completenes.
     last = PECheckSumFix(a).fix()
-    open(sys.argv[2], 'wb').write(last)
+    open(sys.argv[3], 'wb').write(last)
 
 
 if __name__ == "__main__":

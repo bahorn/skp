@@ -64,8 +64,13 @@ build: clean
 		LOAD_OFFSET=`python3 ./src/scripts/find_space.py ./intermediate/curr.elf` \
 		make -C ./src/runtime
 
+	cp ./src/runtime/all.bin ./intermediate/all.bin
+
 	# Patch the kernel image to install the payload
-	python3 src/patch-bzimage $(SOURCE_KERNEL) $(PATCHED_KERNEL)
+	python3 src/patch-bzimage \
+		$(SOURCE_KERNEL) \
+		./intermediate/all.bin \
+		$(PATCHED_KERNEL)
 
 clean:
 	make -C ./src/runtime/ clean
