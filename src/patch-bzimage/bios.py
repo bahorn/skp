@@ -1,6 +1,5 @@
 """
-PoC to patch a bzImage, only for uefi as we are hooking the the uefi functions
-and rely on being able to create more sections.
+Function to identify where to patch to take control post kernel decompression.
 """
 from binsearch import FixedBytes, BinSearch
 

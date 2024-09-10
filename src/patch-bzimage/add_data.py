@@ -1,6 +1,5 @@
 """
-PoC to patch a bzImage, only for uefi as we are hooking the the uefi functions
-and rely on being able to create more sections.
+Function to append data to a kernel bzImage, and add apply our hooks.
 """
 import struct
 import pefile
@@ -9,7 +8,7 @@ from utils import PAGE_SIZE, pad_size, pad
 from bios import bios_patch
 
 
-def add_data(pe_data_orig, data):
+def add_data(pe_data_orig, data, apply_bios_patch=True, apply_uefi_patch=True):
     """
     Add a new section to store our patch in the PE, then append our data, and
     install the patches to transfer control to our payload.
@@ -59,9 +58,10 @@ def add_data(pe_data_orig, data):
     uefi_offset = to_pad_with + offset
 
     # Replacing the UEFI entrypoint
-    new_entrypoint = uefi_offset + bl.get_key(b'uefi_e\x00')
     pe = pefile.PE(data=pe_data)
-    pe.OPTIONAL_HEADER.AddressOfEntryPoint = new_entrypoint
+    if apply_uefi_patch:
+        new_entrypoint = uefi_offset + bl.get_key(b'uefi_e\x00')
+        pe.OPTIONAL_HEADER.AddressOfEntryPoint = new_entrypoint
     pe_data = bytearray(pe.write())
 
     called_from = uefi_offset + bl.get_key_offset(b'uefi_o\x00') + 4
@@ -116,7 +116,9 @@ def add_data(pe_data_orig, data):
 
     # Our BIOS Patch to transfer control, we use a code32_start hook to modify
     # an instruction.
-    new_code32 = 0x100_000 + offset + _code32 - text_start
-    pe_data[0x214:0x214 + 4] = struct.pack('<I', new_code32)
+
+    if apply_bios_patch:
+        new_code32 = 0x100_000 + offset + _code32 - text_start
+        pe_data[0x214:0x214 + 4] = struct.pack('<I', new_code32)
 
     return pe_data
