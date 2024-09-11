@@ -58,6 +58,13 @@ If you need a rootfs, run `just get-rootfs` to download one from OpenWRT.
 A build cache is in `intermediate/SHASUM_OF_KERNEL` which stores a copy of the
 kernels kallsyms and internal ELF.
 
+If you need a kernel, easylkb is integrated, so you can use it like
+`just easylkb 6.8` and get a working 6.8 kernel to test with.
+Adjust the version to try other versions, and you can also change the kconfig as
+well.
+The output kernel will be in
+`./tools/easylkb/kernel/linux-VERSION/arch/x86/boot/bzImage`.
+
 ## Techniques
 
 This modifies two paths to boot the kernel.

@@ -1,13 +1,13 @@
-# List Commands
-default:
-  just --list
-
 # These can be overridden!
 BASEDIR := shell("pwd")
 INTERMEDIATE := BASEDIR / "intermediate"
 ovmffw := env("OVMFFW", "/usr/share/ovmf/OVMF.fd")
 rootfs := env("ROOTFS", BASEDIR / "sample-kernels/openwrt-rootfs.img")
 patched_kernel := env("PATCHED_KERNEL", BASEDIR / "sample-kernels/patched-kernel.bzimage")
+
+# List Commands
+default:
+  just --list
 
 # Install dependencies to build the project
 setup:
@@ -60,6 +60,10 @@ get-rootfs:
     wget -O sample-kernels/openwrt-rootfs.img.gz \
         https://downloads.openwrt.org/releases/23.05.4/targets/x86/64/openwrt-23.05.4-x86-64-generic-ext4-rootfs.img.gz
     cd sample-kernels && gunzip openwrt-rootfs.img.gz
+
+# Use easylkb to build a kernel
+easylkb version kconfig=(BASEDIR / "configs/test.KConfig"):
+    cd ./tools/easylkb/ && python3 easylkb.py -k {{version}} --kconfig {{kconfig}} -dcm 
 
 # Clean the Project
 clean:
