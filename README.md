@@ -83,8 +83,23 @@ like `kallsyms_lookup_name()` are relative to it.
 
 First, we hook the UEFI entrypoint with code that will install a hook on
 ExitBootServices().
-When this hook is ran, it setups up a hook for the UEFI runtime function
-GetVariable(), which is called during boot by most kernels.
+This hook can do one of two things:
+* Setup a hook for the Runtime function `GetVariable()` which should be called
+  during the boot by most kernels.
+* Directly patch the kernel as it is decompressed at this point on post 6.6
+  kernels.
+
+The runtime hook has some advantages in terms of it allowing the use of payloads
+of arbitary sizes, while the direct patch only allows ~1MB, depending on the
+kernel image (see `src/scripts/find_space.py` where it is at the time of writing
+set to 65kb) and also working on older kernel versions as `ExitBootServices()`
+is called much earlier in the boot process.
+The primary disavantage is that you have to do a runtime hook, and the path is
+seperate from what the BIOS hook does.
+
+The runtime hook is probably what you should use in most cases however.
+You can force it to be always used by unseting `DIRECT_PATCHING` in 
+`src/runtime/stage1-uefi-bootservices-hook/Makefile`.
 
 This hook then runs the kSHELF loader and gets the module going.
 
