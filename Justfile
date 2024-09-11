@@ -7,7 +7,7 @@ BASEDIR := shell("pwd")
 INTERMEDIATE := BASEDIR / "intermediate"
 ovmffw := env("OVMFFW", "/usr/share/ovmf/OVMF.fd")
 rootfs := env("ROOTFS", BASEDIR / "sample-kernels/openwrt-rootfs.img")
-patched_kernel := BASEDIR / "sample-kernels/patched-kernel.bzimage"
+patched_kernel := env("PATCHED_KERNEL", BASEDIR / "sample-kernels/patched-kernel.bzimage")
 
 # Install dependencies to build the project
 setup:
