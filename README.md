@@ -13,7 +13,7 @@ older kernels).
 
 Please read the source, as this ain't a something simple to use.
 This also uses the [`just` command runner](https://just.systems), which you will
-need to sinstall.
+need to install.
 
 Setup:
 ```
@@ -48,12 +48,16 @@ created.
 There is also support for two positional arguments to change the source kernel
 and payload.
 
-You can then `just run-ovmf` or `just run-bios` to test it out.
+You can then `just run-ovmf`, `just run-bios` or `just run-grub-uefi` to test it
+out.
 The default configuration requires one of the following to start the VM:
 * attaching gdb with `gdb -ex "target remote localhost:1234"`
 * connecting to `localhost:55555` with netcat to start the virtual machine.
 
-If you need a rootfs, run `just get-rootfs` to download one from OpenWRT.
+If you:
+* need a rootfs, run `just get-rootfs` to download one from OpenWRT.
+* want to run this under uefi GRUB, run `just get-grub` to setup Ubuntu's GRUB
+  (Note that the grub version you install limits which kernels you can boot!)
 
 A build cache is in `intermediate/SHASUM_OF_KERNEL` which stores a copy of the
 kernels kallsyms and internal ELF.
