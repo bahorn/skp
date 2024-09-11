@@ -12,3 +12,4 @@ stage1.h
 intermediate
 thunk
 src/runtime/stage2/runtime.h
+priv

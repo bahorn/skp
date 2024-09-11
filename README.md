@@ -12,10 +12,12 @@ older kernels).
 ## Usage
 
 Please read the source, as this ain't a something simple to use.
+This also uses the [`just` command runner](https://just.systems), which you will
+need to sinstall.
 
 Setup:
 ```
-make setup
+just setup
 ```
 
 Will setup a virtualenv and the dependencies.
@@ -25,10 +27,25 @@ You need to activate the venv before moving on:
 source .venv/bin/activate
 ```
 
-Then, you need to adjust the kernel image defined in the `Makefile` to be
-your kernel, and update the payload.
+Then you need to the the following environment variables:
+```
+export PATCHED_KERNEL=./sample-kernels/patch-kernel.bzimage
+export SOURCE_KERNEL=./sample-kernels/vmlinuz-6.8.0-41-generic
+export ROOTFS=./sample-kernels/openwrt-23.05.4-x86-64-generic-ext4-rootfs.img
+export PAYLOAD=../artifacts/main.bin
+```
 
-Then `make run-ovmf` or `make run-bios` to test it out.
+`PATCHED_KERNEL` is the output kernel bzImage, `SOURCE_KERNEL` is the kernel
+image you are modifying, `ROOTFS` is a rootfs to use for testing and `PAYLOAD`
+is the kSHELF you want to load that was built with klude2.
+
+You can then `just run-ovmf` or `just run-bios` to test it out.
+The default configuration requires one of the following to start the VM:
+* attaching gdb with `gdb -ex "target remote localhost:1234"`
+* connecting to `localhost:55555` with netcat to start the virtual machine.
+
+A build cache is in `intermediate/SHASUM_OF_KERNEL` which stores a copy of the
+kernels kallsyms and internal ELF.
 
 ## Techniques
 
