@@ -29,20 +29,31 @@ source .venv/bin/activate
 
 Then you need to the the following environment variables:
 ```
-export PATCHED_KERNEL=./sample-kernels/patch-kernel.bzimage
 export SOURCE_KERNEL=./sample-kernels/vmlinuz-6.8.0-41-generic
-export ROOTFS=./sample-kernels/openwrt-23.05.4-x86-64-generic-ext4-rootfs.img
 export PAYLOAD=../artifacts/main.bin
 ```
 
-`PATCHED_KERNEL` is the output kernel bzImage, `SOURCE_KERNEL` is the kernel
-image you are modifying, `ROOTFS` is a rootfs to use for testing and `PAYLOAD`
-is the kSHELF you want to load that was built with klude2.
+You can set the following envvars:
+* `PATCHED_KERNEL` is the output kernel bzImage
+* `SOURCE_KERNEL` is the kernel image you are modifying,
+* `ROOTFS` is a rootfs to use for testing.
+* `PAYLOAD` is the kSHELF you want to load that was built with klude2.
+* `OVMFFW` is the OVMF firmware build you want to run in your tests.
+
+(You can also set these by an a per command basis, see the Justfile for internla
+names, then set those before the command you are trying to run!)
+
+With those, you can run `just patch-kernel` and the patched kernel will be
+created.
+There is also support for two positional arguments to change the source kernel
+and payload.
 
 You can then `just run-ovmf` or `just run-bios` to test it out.
 The default configuration requires one of the following to start the VM:
 * attaching gdb with `gdb -ex "target remote localhost:1234"`
 * connecting to `localhost:55555` with netcat to start the virtual machine.
+
+If you need a rootfs, run `just get-rootfs` to download one from OpenWRT.
 
 A build cache is in `intermediate/SHASUM_OF_KERNEL` which stores a copy of the
 kernels kallsyms and internal ELF.

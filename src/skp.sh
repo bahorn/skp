@@ -4,6 +4,9 @@ export SOURCE_KERNEL=$1
 export REAL_PAYLOAD=$2
 export INTERMEDIATE=$3
 export PATCHED_KERNEL=$4
+
+source .venv/bin/activate
+
 # extract kallsyms
 if [ ! -f $INTERMEDIATE/kallsyms ]; then
     kallsyms-finder $SOURCE_KERNEL > $INTERMEDIATE/kallsyms

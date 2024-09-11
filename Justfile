@@ -1,49 +1,68 @@
+# List Commands
 default:
   just --list
 
-export BASEDIR := `pwd`
+# These can be overridden!
+BASEDIR := shell("pwd")
+INTERMEDIATE := BASEDIR / "intermediate"
+ovmffw := env("OVMFFW", "/usr/share/ovmf/OVMF.fd")
+rootfs := env("ROOTFS", BASEDIR / "sample-kernels/openwrt-rootfs.img")
+patched_kernel := BASEDIR / "sample-kernels/patched-kernel.bzimage"
 
+# Install dependencies to build the project
 setup:
     virtualenv -p python3 .venv
     ./tools/setup.sh
 
+# Run a Kernel via UEFI with OVMF
 run-ovmf :
     qemu-system-x86_64 \
         -accel kvm \
-        -smbios type=0,uefi=on \
-        -bios /usr/share/ovmf/OVMF.fd \
-        -hda $ROOTFS \
+        -hda {{rootfs}} \
         -m 4G \
-        -kernel $PATCHED_KERNEL \
+        -kernel {{patched_kernel}} \
         -nographic \
         -gdb tcp::1234 \
         -S \
         -append "console=ttyS0,9600 root=/dev/sda" \
         -monitor tcp:127.0.0.1:55555,server,nowait \
-        -netdev user,id=network0 -device e1000,netdev=network0,mac=52:54:00:12:34:56
+        -netdev user,id=network0 \
+        -device e1000,netdev=network0,mac=52:54:00:12:34:56 \
+        -smbios type=0,uefi=on \
+        -bios {{ovmffw}}
 
+# Run a Kernel via BIOS
 run-bios:
     qemu-system-x86_64 \
         -accel kvm \
-        -hda ${ROOTFS} \
+        -hda {{rootfs}} \
         -m 4G \
-        -kernel ${PATCHED_KERNEL} \
+        -kernel {{patched_kernel}} \
         -nographic \
         -gdb tcp::1234 \
         -S \
         -append "console=ttyS0,9600 root=/dev/sda" \
         -monitor tcp:127.0.0.1:55555,server,nowait \
-        -netdev user,id=network0 -device e1000,netdev=network0,mac=52:54:00:12:34:56
+        -netdev user,id=network0 \
+        -device e1000,netdev=network0,mac=52:54:00:12:34:56
 
-build:
-    mkdir -p ${BASEDIR}/intermediate/`shasum ${SOURCE_KERNEL} | cut -f 1 -d ' '`
+# Patch a kernel
+patch-kernel kernel=env("SOURCE_KERNEL") payload=env("PAYLOAD"):
+    mkdir -p {{INTERMEDIATE}}/`./tools/shasum.sh {{kernel}}`
     ./src/skp.sh \
-        ${SOURCE_KERNEL} \
-        ${PAYLOAD} \
-        ${BASEDIR}/intermediate/`shasum ${SOURCE_KERNEL} | cut -f 1 -d ' '` \
-        ${PATCHED_KERNEL}
+        {{kernel}} \
+        {{payload}} \
+        {{INTERMEDIATE}}/`./tools/shasum.sh {{kernel}}` \
+        {{patched_kernel}}
 
+# Download OpenWRTs rootfs
+get-rootfs:
+    wget -O sample-kernels/openwrt-rootfs.img.gz \
+        https://downloads.openwrt.org/releases/23.05.4/targets/x86/64/openwrt-23.05.4-x86-64-generic-ext4-rootfs.img.gz
+    cd sample-kernels && gunzip openwrt-rootfs.img.gz
+
+# Clean the Project
 clean:
     make -C ./src/runtime clean
-    -rm -r ${BASEDIR}/intermediate
-    -rm ${PATCHED_KERNEL}
+    -rm -r {{INTERMEDIATE}}
+    -rm {{patched_kernel}}
