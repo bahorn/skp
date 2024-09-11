@@ -20,12 +20,7 @@ Setup:
 just setup
 ```
 
-Will setup a virtualenv and the dependencies.
-
-You need to activate the venv before moving on:
-```
-source .venv/bin/activate
-```
+This will setup a virtualenv and the dependencies.
 
 Then you need to the the following environment variables:
 ```
