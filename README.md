@@ -1,6 +1,6 @@
 # Modern Static Kernel Patching
 
-This is a PoC tool to patch linux kernel bzImages to load a kSHELF.
+This is a PoC tool to patch x86 Linux kernel bzImages to load a kSHELF.
 
 This is a modern version of a the idea from Phrack 60-8 [1], but doing very
 different style of patches.
@@ -95,9 +95,10 @@ This hook then runs the kSHELF loader and gets the module going.
 
 ### BIOS
 
-This BIOS path installs a hook in code32_start[3], which patches the code to jump
-to the decompressed kernel to then call our code to patch the kernel.
-We jump to our code by going to 0x100_000 + offset to our code.
+This BIOS path installs a hook in code32_start (see advanced hooks in [3]),
+which patches the code to jump to the decompressed kernel to then call our code
+to patch the kernel.
+We jump to our code by going to `0x100_000 + offset - start of .text`.
 
 This is done as page tables are setup at this point, and will cut off our
 appended data from being accessed relatively.
@@ -106,6 +107,25 @@ relocation, which is where we call our patcher from.
 
 Our code here will then copy the remaining data into a known cavity in the
 kernel image, and hook an initcall to transfer control to it.
+
+## Background / Notes
+
+This is not the first attempt at this sort of thing.
+The original paper in Phrack 60-8 [1] is the first attempt of this that I'm
+aware of.
+More recently, I'm aware of two projects [4][5] (found via [6]) that did this
+for non-x86 kernel images, aiming to replace the kernel and adjust various
+offsets.
+I looked at doing that sort of approach, but ended up deciding it was easier to
+go my route to support a wider variety of kernel versions.
+
+The x86 boot path has undergone a bit of work in 2023 [7][8], which made a lot
+of good changes.
+The PE header got reworked which made adding an extra section easier (though you
+can just remove .reloc in older images, which this project does).
+
+My code does assume my added section is writable, to use global variables, which
+might cause issues with some UEFI firmware.
 
 ## License
 
@@ -116,3 +136,8 @@ GPL2
 * [1] http://phrack.org/issues/60/8.html#article
 * [2] https://github.com/marin-m/vmlinux-to-elf
 * [3] https://www.kernel.org/doc/html/v6.8/arch/x86/boot.html
+* [4] https://jamchamb.net/2022/01/02/modify-vmlinuz-arm.html
+* [5] https://github.com/Caesurus/CTF_Writeups/blob/main/2024-04-zImageKernelPatch/README.MD
+* [6] https://stackoverflow.com/questions/76571876/how-to-repack-vmlinux-elf-back-to-bzimage-file
+* [7] https://lore.kernel.org/all/20230915171623.655440-10-ardb@google.com/
+* [8] https://lore.kernel.org/all/20230807162720.545787-1-ardb@kernel.org/
