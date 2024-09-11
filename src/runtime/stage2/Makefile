@@ -10,6 +10,7 @@ build:
 
 	cat ./thunk.bin ../kshelf-loader/runtime_hook.bin > runtime.bin
 	xxd -i runtime.bin > runtime.h
+	python3 ./get-offset.py ./runtime.bin >> runtime.h
 
 clean:
 	-rm thunk.bin runtime.h runtime.bin

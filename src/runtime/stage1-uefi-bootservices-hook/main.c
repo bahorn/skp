@@ -29,6 +29,8 @@ void *memcpy(void *dest, const void *src, int n)
     return dest;
 }
 
+#define DIRECT_PATCHING
+
 #ifdef DIRECT_PATCHING
 
 /* Check if this address is mapped, and a valid entrypoint */
@@ -51,7 +53,11 @@ int check_address(void *addr, UINT64 pc)
 void apply_patch(void *addr)
 {
     // Copy our payload in.
-    memcpy(addr + LOAD_OFFSET, stage1, stage1_len);
+    memcpy(
+        addr + LOAD_OFFSET,
+        runtime_bin + runtime_bin_offset,
+        runtime_bin_len - runtime_bin_offset
+    );
     // Hook our target initcall.
     UINT32 *target = addr + _initcall_offset;
     *target = (UINT32) (LOAD_OFFSET - _initcall_offset);
@@ -101,9 +107,9 @@ int try_direct_patching()
             continue;
         }
         
-        if (check_address(curr->PhysicalStart, curr->NumberOfPages)) {
+        if (check_address((void *)curr->PhysicalStart, curr->NumberOfPages)) {
             /* + 0x80 as that is startup_64 */
-            apply_patch(curr->PhysicalStart + _startup_64);
+            apply_patch((void *) curr->PhysicalStart + _startup_64);
             res = 1;
             break;
         }
@@ -156,7 +162,7 @@ EFI_STATUS exit_bootservices_hook(EFI_HANDLE ImageHandle, UINTN MapKey)
     called = 1;
 
 #ifdef DIRECT_PATCHING
-    if (!try_direct_patch())
+    if (!try_direct_patching())
         install_runtime_hook();
 #else
     install_runtime_hook();

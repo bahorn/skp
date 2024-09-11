@@ -18,9 +18,9 @@ _bios_entry:
 ; so the kernel pads sections with 0xcc, with a 0x20_00_00 alignment, so we
 ; have a ton of free space to place a payload.
 ; %define _stage1_offset 0x01_30_00_00
-    lea rsi, [rel _bios_runtime_thunk]
+    lea rsi, [rel _initcall_runtime_thunk]
     lea rdi, [rax + _stage1_offset]
-    mov rcx, runtime_hook_len + (_runtime_hook - _bios_runtime_thunk)
+    mov rcx, runtime_hook_len + (_runtime_hook - _initcall_runtime_thunk)
     rep movsb
 
 
@@ -37,12 +37,3 @@ _bios_entry:
     pop rcx
     pop rax
     jmp rax
-
-; This is the code that will be copied into a cavity into the kernel image.
-; So if get here we got patched into the kernel and called via an initcall.
-_bios_runtime_thunk:
-; Want to pass in our known address of _text
-; In this case, it's RIP relative back.
-    lea rdi, [rel $-_stage1_offset-_startup_64_offset]
-    mov rsi, 1
-    jmp _runtime_hook
