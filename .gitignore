@@ -1,7 +1,7 @@
 *.o
 *.s
 logs
-sample-kernels
+samples
 old
 *.pyc
 __pycache__
@@ -13,3 +13,5 @@ intermediate
 thunk
 src/runtime/stage2/runtime.h
 priv
+*.bzimage
+*.img

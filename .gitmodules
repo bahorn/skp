@@ -1,6 +1,8 @@
 [submodule "vmlinux-to-elf"]
 	path = tools/vmlinux-to-elf
-	url = https://github.com/bahorn/vmlinux-to-elf.git
+    url = https://github.com/bahorn/vmlinux-to-elf.git
+    ignore = dirty
 [submodule "tools/easylkb"]
 	path = tools/easylkb
-	url = https://github.com/deepseagirl/easylkb
+    url = https://github.com/deepseagirl/easylkb
+    ignore = dirty
