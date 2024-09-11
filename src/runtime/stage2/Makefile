@@ -5,10 +5,10 @@ build:
 		-D _startup_64_offset=`python3 ../../scripts/find_symbol.py $(SYMBOLS) startup_64` \
 		-D runtime_hook_len=`wc -c < ../kshelf-loader/runtime_hook.bin` \
 		-D _initcall_offset=`python3 ../../scripts/find_initcall.py $(SYMBOLS)` \
-		-f bin ./thunk.asm \
-		-o thunk.bin
+		-f bin ./stage2.asm \
+		-o stage2.bin
 
-	cat ./thunk.bin ../kshelf-loader/runtime_hook.bin > runtime.bin
+	cat ./stage2.bin ../kshelf-loader/runtime_hook.bin > runtime.bin
 	xxd -i runtime.bin > runtime.h
 	python3 ./get-offset.py ./runtime.bin >> runtime.h
 
