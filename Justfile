@@ -104,3 +104,4 @@ clean:
     make -C ./src/runtime clean
     -rm -r {{INTERMEDIATE}}
     -rm {{patched_kernel}}
+    -rm -r {{grub_root}}
