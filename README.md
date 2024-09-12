@@ -137,6 +137,9 @@ can just remove .reloc in older images, which this project does).
 My code does assume my added section is writable, to use global variables, which
 might cause issues with some UEFI firmware.
 
+Kernel Images do include their own checksum, as part of build.c, but AFAIK
+nothing verifies it so I did not bother reimplementing it.
+
 ## License
 
 GPL2
