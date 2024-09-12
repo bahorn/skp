@@ -140,6 +140,9 @@ might cause issues with some UEFI firmware.
 Kernel Images do include their own checksum, as part of build.c, but AFAIK
 nothing verifies it so I did not bother reimplementing it.
 
+If you care about infecting LKMs, I did a seperate project reimplementing
+another old phrack article that can do that. [9]
+
 ## License
 
 GPL2
@@ -154,3 +157,4 @@ GPL2
 * [6] https://stackoverflow.com/questions/76571876/how-to-repack-vmlinux-elf-back-to-bzimage-file
 * [7] https://lore.kernel.org/all/20230915171623.655440-10-ardb@google.com/
 * [8] https://lore.kernel.org/all/20230807162720.545787-1-ardb@kernel.org/
+* [9] https://github.com/bahorn/lkm-infect/
