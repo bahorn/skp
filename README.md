@@ -151,7 +151,6 @@ another old phrack article that can do that. [9]
 
 On my remaining list todo is the following:
 * Code cleanup, src/patch-bzimage is a bit of a mess right now.
-* Integrating BIOS GRUB for testing
 * Figure out why 5.15 segfaults with the Runtime hook. I need to git bisect a
   ton of kernels.
 * Maybe support older kernels. Unsure if I'll bother, as the issue is dealing

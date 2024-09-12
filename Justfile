@@ -56,11 +56,11 @@ run-bios:
 
 # Run the Kernel via UEFI GRUB
 run-grub-uefi:
-    rm -r {{grub_root}}
+    -rm -r {{grub_root}}
     mkdir -p {{grub_root}}/efi/boot {{grub_root}}/EFI/ubuntu
     cp ./samples/grub/grubx64.efi {{grub_root}}/efi/boot/bootx64.efi
     cp {{patched_kernel}} {{grub_root}}/kernel.bzimage
-    cp {{config_dir}}/grub.cfg {{grub_root}}/EFI/ubuntu/grub.cfg
+    cp {{config_dir}}/grub-uefi.cfg {{grub_root}}/EFI/ubuntu/grub.cfg
 
     qemu-system-x86_64 \
         -hda fat:rw:samples/grub-root \
@@ -75,6 +75,26 @@ run-grub-uefi:
         -device e1000,netdev=network0,mac=52:54:00:12:34:56 \
         -smbios type=0,uefi=on \
         -bios {{ovmffw}}
+
+# BIOS grub
+run-grub-bios:
+    -rm -r {{grub_root}}
+    mkdir -p {{grub_root}}/boot/grub
+    cp {{patched_kernel}} {{grub_root}}/kernel.bzimage
+    cp {{config_dir}}/grub-bios.cfg {{grub_root}}/boot/grub/grub.cfg
+    grub-mkrescue -o ./samples/grub.iso {{grub_root}}
+
+    qemu-system-x86_64 \
+        -hda ./samples/grub.iso \
+        -hdb {{rootfs}} \
+        -accel kvm \
+        -m 4G \
+        -nographic \
+        -gdb tcp::1234 \
+        -S \
+        -monitor tcp:127.0.0.1:55555,server,nowait \
+        -netdev user,id=network0 \
+        -device e1000,netdev=network0,mac=52:54:00:12:34:56
 
 # Patch a kernel
 patch-kernel kernel=env("SOURCE_KERNEL") payload=env("PAYLOAD"):
