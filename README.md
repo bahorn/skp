@@ -1,36 +1,52 @@
 # SKP - Modern x86 Linux Kernel Patching
 
 This is a PoC tool to patch x86 Linux kernel bzImages to load a kSHELF.
-
-This is a modern version of a the idea from Phrack 60-8 [1], but doing very
+This is a modern version of a the idea from Phrack 60-8 [1], but doing a very
 different style of patches.
 
 This supports 5.15+ (beyond some vmalloc changes in 6.10) for the BIOS boot path
 and 5.16+ for the UEFI runtime hook (due to a bug I haven't yet figured out in
 older kernels).
 
-Currently relying on a private repo for the payloads, which will be GPL2'd.
+Currently relying on a private repo for the payloads, which will be GPL2'd soon
+(tm).
 
 ## Usage
 
-Please read the source, as this ain't a something simple to use.
-This also uses the [`just` command runner](https://just.systems), which you will
-need to install.
+Please read the source, as this is not something simple to use.
 
-Setup:
+You will need to install the [`just` command runner](https://just.systems).
+
+Help:
+```
+Available recipes:
+    clean         # Clean the Project
+    default       # List Commands
+    easylkb version kconfig=(BASEDIR / "configs/test.KConfig") # Use easylkb to build a kernel
+    get-grub-uefi # Download the Ubuntu's UEFI build of GRUB
+    get-rootfs    # Download OpenWRTs rootfs
+    patch-kernel kernel=env("SOURCE_KERNEL") payload=env("PAYLOAD") # Patch a kernel
+    run-bios      # Run a Kernel via BIOS
+    run-grub-bios # BIOS grub
+    run-grub-uefi # Run the Kernel via UEFI GRUB
+    run-ovmf      # Run a Kernel via UEFI with OVMF
+    setup         # Install dependencies to build the project
+```
+
+
+To setup the virtualenv and dependencies:
 ```
 just setup
 ```
 
-This will setup a virtualenv and the dependencies.
-
-Then you need to the the following environment variables:
+Then you need to the the following environment variables before you can patch a
+kernel:
 ```
 export SOURCE_KERNEL=./sample-kernels/vmlinuz-6.8.0-41-generic
 export PAYLOAD=../artifacts/main.bin
 ```
 
-You can set the following envvars:
+The following envvars exist:
 * `PATCHED_KERNEL` is the output kernel bzImage
 * `SOURCE_KERNEL` is the kernel image you are modifying,
 * `ROOTFS` is a rootfs to use for testing.
@@ -40,16 +56,20 @@ You can set the following envvars:
   patching with `--no-uefi` and `--no-bios` respectively.
 * `EXTRA_STAGE2_DEFINE` can be used to unset the DIRECT_PATCHING feature.
 
-(You can also set these by an a per command basis, see the Justfile for internla
+(You can also set these by an a per command basis, see the Justfile for internal
 names, then set those before the command you are trying to run!)
 
 With those, you can run `just patch-kernel` and the patched kernel will be
 created.
 There is also support for two positional arguments to change the source kernel
-and payload.
+and payload instead of via the envvars.
 
-You can then `just run-ovmf`, `just run-bios` or `just run-grub-uefi` to test it
-out.
+You can then the following to test it out:
+* `just run-ovmf`
+* `just run-bios`
+* `just run-grub-uefi`
+* `just run-grub-bios`
+
 The default configuration requires one of the following to start the VM:
 * attaching gdb with `gdb -ex "target remote localhost:1234"`
 * connecting to `localhost:55555` with netcat to start the virtual machine.
@@ -63,7 +83,7 @@ If you:
 A build cache is in `intermediate/SHASUM_OF_KERNEL` which stores a copy of the
 kernels kallsyms and internal ELF.
 
-If you need a kernel, easylkb is integrated, so you can use it like
+If you need a kernel, easylkb is integrated, which you can use it via
 `just easylkb 6.8` and get a working 6.8 kernel to test with.
 Adjust the version to try other versions, and you can also change the kconfig as
 well.
@@ -73,7 +93,7 @@ The output kernel will be in
 ## Techniques
 
 This modifies two paths to boot the kernel.
-Via UEFI and via the traditional BIOS bootloaders.
+Via UEFI and by the traditional BIOS bootloaders.
 Both routes will load a kSHELF, which is a type of kernel module I developed to
 avoid having a module loaded.
 
@@ -139,8 +159,8 @@ of good changes.
 The PE header got reworked which made adding an extra section easier (though you
 can just remove .reloc in older images, which this project does).
 
-My code does assume my added section is writable, to use global variables, which
-might cause issues with some UEFI firmware.
+The code does assume the added section is writable, to use global variables,
+which might cause issues with some UEFI firmware.
 The recent kernel changes were meant to avoid them existing in the kernel.
 
 Kernel Images do include their own checksum, as part of build.c, but AFAIK
