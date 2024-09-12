@@ -1,12 +1,13 @@
 """
 Function to identify where to patch to take control post kernel decompression.
 """
-from binsearch import FixedBytes, BinSearch
+from binsearch import FixedBytes, SkipBytes, BinSearch
 
 
 def bios_patch(pe_data, offset, text_offset=0x5000, bios_start=0):
     # Patching for BIOS
-    # targetting the end of startup_64, in Lrelocated
+    # targetting the end of startup_64, in Lrelocated.
+    # arch/x86/boot/compressed/head_64.S
     # have to match on two sequences, on for newer kernels and one for older as
     # there has been some changes in what is otherwise a pretty stable part of
     # the kernel tree.
@@ -18,7 +19,6 @@ def bios_patch(pe_data, offset, text_offset=0x5000, bios_start=0):
     patterns = [
         # post 6.6
         {
-            'total': 2 + 9,
             'offset': 3,
             'pattern': [
                 FixedBytes(b'\x4c\x89\xfe'),
@@ -28,24 +28,22 @@ def bios_patch(pe_data, offset, text_offset=0x5000, bios_start=0):
         },
         # pre 6.6
         {
-            'total': 2 + 7,
-            'offset': 1,
+            'offset': 6,
             'pattern': [
+                FixedBytes(b'\xe8'),
+                SkipBytes(4),
                 FixedBytes(b'\x5e'),
                 FixedBytes(b'\xff\xe0'),
-                FixedBytes(b'\x0f\x1f\x80\x00\x00\x00\x00')
             ]
         }
     ]
 
     match_offset = 0
-    # total = 0
     matches = []
 
     for pattern in patterns:
         bs = BinSearch(pattern['pattern'])
         match_offset = pattern['offset']
-        # total = pattern['total']
         matches = bs.search(pe_data)
 
         if len(matches) == 1:
