@@ -92,7 +92,7 @@ get-rootfs:
     cd samples/rootfs/ && gunzip openwrt-rootfs.img.gz
 
 # Download the Ubuntu's UEFI build of GRUB
-get-grub:
+get-grub-uefi:
     mkdir -p samples/grub/
     wget -O samples/grub/grub-ubuntu.deb https://launchpad.net/ubuntu/+archive/primary/+files/grub-efi-amd64-unsigned_2.12-5ubuntu4_amd64.deb
     cd ./samples/grub/ && \

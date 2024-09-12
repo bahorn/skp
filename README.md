@@ -1,4 +1,4 @@
-# Modern Static Kernel Patching
+# SKP - Modern x86 Linux Kernel Patching
 
 This is a PoC tool to patch x86 Linux kernel bzImages to load a kSHELF.
 
@@ -8,6 +8,8 @@ different style of patches.
 This supports 5.15+ (beyond some vmalloc changes in 6.10) for the BIOS boot path
 and 5.16+ for the UEFI runtime hook (due to a bug I haven't yet figured out in
 older kernels).
+
+Currently relying on a private repo for the payloads, which will be GPL2'd.
 
 ## Usage
 
@@ -54,8 +56,9 @@ The default configuration requires one of the following to start the VM:
 
 If you:
 * need a rootfs, run `just get-rootfs` to download one from OpenWRT.
-* want to run this under uefi GRUB, run `just get-grub` to setup Ubuntu's GRUB
-  (Note that the grub version you install limits which kernels you can boot!)
+* want to run this under uefi GRUB, run `just get-grub-uefi` to setup Ubuntu's
+  UEFI GRUB (Note that the grub version you install limits which kernels you can
+  boot!)
 
 A build cache is in `intermediate/SHASUM_OF_KERNEL` which stores a copy of the
 kernels kallsyms and internal ELF.
@@ -138,12 +141,24 @@ can just remove .reloc in older images, which this project does).
 
 My code does assume my added section is writable, to use global variables, which
 might cause issues with some UEFI firmware.
+The recent kernel changes were meant to avoid them existing in the kernel.
 
 Kernel Images do include their own checksum, as part of build.c, but AFAIK
 nothing verifies it so I did not bother reimplementing it.
 
 If you care about infecting LKMs, I did a seperate project reimplementing
 another old phrack article that can do that. [9]
+
+On my remaining list todo is the following:
+* Code cleanup, src/patch-bzimage is a bit of a mess right now.
+* Integrating BIOS GRUB for testing
+* Figure out why 5.15 segfaults with the Runtime hook. I need to git bisect a
+  ton of kernels.
+* Maybe support older kernels. Unsure if I'll bother, as the issue is dealing
+  with things like symbols being renamed, etc. I only ever want to care about
+  kernels released in the last 5 years. 20.04 is the furthest I want to go back
+  to.
+* A proper writeup.
 
 ## License
 
