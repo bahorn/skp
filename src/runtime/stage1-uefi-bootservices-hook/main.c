@@ -29,8 +29,6 @@ void *memcpy(void *dest, const void *src, int n)
     return dest;
 }
 
-#define DIRECT_PATCHING
-
 #ifdef DIRECT_PATCHING
 
 /* Check if this address is mapped, and a valid entrypoint */

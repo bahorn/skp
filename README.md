@@ -34,6 +34,9 @@ You can set the following envvars:
 * `ROOTFS` is a rootfs to use for testing.
 * `PAYLOAD` is the kSHELF you want to load that was built with klude2.
 * `OVMFFW` is the OVMF firmware build you want to run in your tests.
+* `EXTRA_PATCH` is flags to src/patch-bzimage. You can disable uefi and bios
+  patching with `--no-uefi` and `--no-bios` respectively.
+* `EXTRA_STAGE2_DEFINE` can be used to unset the DIRECT_PATCHING feature.
 
 (You can also set these by an a per command basis, see the Justfile for internla
 names, then set those before the command you are trying to run!)
@@ -98,8 +101,7 @@ The primary disavantage is that you have to do a runtime hook, and the path is
 seperate from what the BIOS hook does.
 
 The runtime hook is probably what you should use in most cases however.
-You can force it to be always used by unseting `DIRECT_PATCHING` in 
-`src/runtime/stage1-uefi-bootservices-hook/Makefile`.
+You can force it to be always used by unseting `DIRECT_PATCHING` in the envvar.
 
 This hook then runs the kSHELF loader and gets the module going.
 

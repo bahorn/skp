@@ -14,7 +14,6 @@ fi
 
 # extract the kernel so we can find an offset to copy out payload to in the
 # kernel image.
-#
 if [ ! -f $INTERMEDIATE/curr.elf ]; then
     ./tools/extract-vmlinux $SOURCE_KERNEL > $INTERMEDIATE/curr.elf
 fi
@@ -22,13 +21,16 @@ fi
 # compile the payload
 PAYLOAD=$REAL_PAYLOAD \
     SYMBOLS=$INTERMEDIATE/kallsyms \
+    UEFI_DIRECT_PATCH=true \
     LOAD_OFFSET=`python3 ./src/scripts/find_space.py $INTERMEDIATE/curr.elf` \
     make -C ./src/runtime
 
 cp ./src/runtime/all.bin $INTERMEDIATE/runtime.bin
 
+
 # Patch the kernel image to install the payload
 python3 src/patch-bzimage \
     $SOURCE_KERNEL \
     $INTERMEDIATE/runtime.bin \
-    $PATCHED_KERNEL
+    $PATCHED_KERNEL \
+    $EXTRA_PATCH

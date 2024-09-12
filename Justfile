@@ -7,6 +7,12 @@ patched_kernel := env("PATCHED_KERNEL", BASEDIR / "samples/patched-kernel.bzimag
 grub_root := env("GRUB_ROOT", BASEDIR / "samples/grub-root")
 config_dir := BASEDIR / "configs"
 
+# Extra flags to patch-bzimage, can disable uefi or bios patching with this.
+export EXTRA_PATCH := env("EXTRA_PATCH", "")
+
+# To enable / disable direct patching
+export EXTRA_STAGE2_DEFINE := env("EXTRA_STAGE2_DEFINE", "-DDIRECT_PATCHING")
+
 # List Commands
 default:
   just --list
