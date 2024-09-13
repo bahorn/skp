@@ -154,6 +154,16 @@ offsets.
 I looked at doing that sort of approach, but ended up deciding it was easier to
 go my route to support a wider variety of kernel versions.
 
+I do think the approach to get transfer control to the appended code in Phrack
+60-8 is a bit bizare, as I went and reviewed kernels from that era and the
+initcall approach did exist back then.
+Would have made far more sense to use it than modify the syscall table.
+
+I didn't bother removing the bss clearing code, as I just appended 2 extra pages
+of null bytes, which worked fine with this technique as it doesn't need to
+survive the whole boot process.
+Those do get corrupted on older kernels in the BIOS bootpath though.
+
 The x86 boot path has undergone a bit of work in 2023 [7][8], which made a lot
 of good changes.
 The PE header got reworked which made adding an extra section easier (though you
