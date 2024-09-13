@@ -8,8 +8,17 @@ This supports 5.15+ (beyond some vmalloc changes in 6.10) for the BIOS boot path
 and 5.16+ for the UEFI runtime hook (due to a bug I haven't yet figured out in
 older kernels).
 
+Primarily tested with kernel images from Ubuntu, and my testing KConfig is
+derived from the default Ubuntu configuration.
+Other distros might do something that breaks this, though I hope not :)
+Make sure ftrace is enabled and you have `CONFIG_REGULATOR` as that is used in
+the initcall hook.
+
 Currently relying on a private repo for the payloads, which will be GPL2'd soon
 (tm).
+You can probably get by with my older public version of
+[klude](https://github.com/bahorn/klude), just know I have fixed the major bugs
+in it now.
 
 ## Usage
 
