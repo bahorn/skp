@@ -179,10 +179,18 @@ nothing verifies it so I did not bother reimplementing it.
 If you care about infecting LKMs, I did a seperate project reimplementing
 another old phrack article that can do that. [9]
 
+I am obviously not the first person to come up with hooking a runtime service.
+pcileech, a project for performing DMA attacks, uses it to target older kernel
+versions [10].
+It finds `kallsyms_lookup_name()` in that shellcode, which is what you should do
+if you want to make the patching code smaller and not require using
+`vmlinux-to-elf`.
+
 On my remaining list todo is the following:
 * Code cleanup, src/patch-bzimage is a bit of a mess right now.
 * Figure out why 5.15 segfaults with the Runtime hook. I need to git bisect a
-  ton of kernels.
+  ton of kernels. Doing a vfs hook like pcileech might be a suitable way of
+  fixing this.
 * Maybe support older kernels. Unsure if I'll bother, as the issue is dealing
   with things like symbols being renamed, etc. I only ever want to care about
   kernels released in the last 5 years. 20.04 is the furthest I want to go back
@@ -204,3 +212,4 @@ GPL2
 * [7] https://lore.kernel.org/all/20230915171623.655440-10-ardb@google.com/
 * [8] https://lore.kernel.org/all/20230807162720.545787-1-ardb@kernel.org/
 * [9] https://github.com/bahorn/lkm-infect/
+* [10] https://github.com/ufrisk/pcileech/blob/master/pcileech_shellcode/lx64_stage2_efi.asm
