@@ -168,9 +168,9 @@ I do think the approach to get transfer control to the appended code in Phrack
 initcall approach did exist back then.
 Would have made far more sense to use it than modify the syscall table.
 
-I didn't bother removing the bss clearing code, as I just appended 2 extra pages
-of null bytes, which worked fine with this technique as it doesn't need to
-survive the whole boot process.
+Like the article I didn't bother removing the bss clearing code, as I just
+appended 2 extra pages of null bytes to fill up bss, which worked fine with this
+technique as it doesn't need to survive the whole boot process.
 Those do get corrupted on older kernels in the BIOS bootpath though.
 
 The x86 boot path has undergone a bit of work in 2023 [7][8], which made a lot
