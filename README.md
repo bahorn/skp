@@ -146,8 +146,8 @@ We jump to our code by going to `0x100_000 + offset - start of .text`.
 
 This is done as page tables are setup at this point, and will cut off our
 appended data from being accessed relatively.
-But there remains the mapping at 0x100_000 we can still use if we disable kernel
-relocation, which is where we call our patcher from.
+But there remains the mapping at 0x100_000, which we can use if we set the
+`pref_address` in the x86 boot protocol [3].
 
 Our code here will then copy the remaining data into a known cavity in the
 kernel image, and hook an initcall to transfer control to it.
@@ -184,6 +184,24 @@ The recent kernel changes were meant to avoid them existing in the kernel.
 
 Kernel Images do include their own checksum, as part of build.c, but AFAIK
 nothing verifies it so I did not bother reimplementing it.
+
+One thing I find a bit confusing is that the `pref_address` in the x86 boot
+protocol is meant to be where the kernel is relocated to.
+On modern kernels it is set to 0x1_000_000, but it was fine for me to lower it
+down to 0x100_000.
+GRUB does use it if the relocatable flag (otherwise 0x100_000 is used) is set
+but I got away without it being changed with the default `-kernel` flag in qemu
+with it always using 0x100_000.
+I believe qemu ignoring this is a bug, and GRUB always using 0x100_000 if the
+kernel isn't relocatable is wrong as well as it seems to contradict [3]:
+
+> This field, if nonzero, represents a preferred load address for the kernel.
+> A relocating bootloader should attempt to load at this address if possible.
+>
+> A non-relocatable kernel will unconditionally move itself and to run at this
+> address.
+
+Though there might be historical reasons for this.
 
 If you care about infecting LKMs, I did a seperate project reimplementing
 another old phrack article that can do that. [9]
