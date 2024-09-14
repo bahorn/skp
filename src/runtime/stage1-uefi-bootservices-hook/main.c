@@ -153,7 +153,11 @@ void install_runtime_hook()
 
 EFI_STATUS exit_bootservices_hook(EFI_HANDLE ImageHandle, UINTN MapKey)
 {
-    // Could be potentially called twice, so deal with that.
+    /* We are changing the memory map, so the kernel will end up calling
+     * ExitBootSerivces() twice, so we need to avoid issues here.
+     * see:
+     * https://elixir.bootlin.com/linux/v6.10.10/source/drivers/firmware/efi/libstub/efi-stub-helper.c#L450
+     */
     if (called == 1) {
         goto done;
     }
