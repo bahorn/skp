@@ -4,7 +4,7 @@ Function to append data to a kernel bzImage, and add apply our hooks.
 import struct
 import pefile
 from badlink import BadLink
-from consts import PAGE_SIZE
+from consts import PAGE_SIZE, BIOS_TARGET_ADDRESS
 from utils import pad_size, pad
 from bios import bios_patch
 
@@ -71,7 +71,7 @@ def add_data(pe_data_orig, data, apply_bios_patch=True, apply_uefi_patch=True):
     # need to calculate an offset to use to call the old entrypoint
     bl.set_key(b'uefi_o\x00', struct.pack('<i', orig_entrypoint))
 
-    k = 0x100_000 + offset + bl.get_key(b'o_ptch\x00') - text_start
+    k = BIOS_TARGET_ADDRESS + offset + bl.get_key(b'o_ptch\x00') - text_start
     bl.set_key(b'o_tocp\x00', struct.pack('<I', k))
 
     # need to set the offsets we use patch the bios.
@@ -109,7 +109,7 @@ def add_data(pe_data_orig, data, apply_bios_patch=True, apply_uefi_patch=True):
     # address with various bootloaders.
     pe_data[0x234] = 0
     # And fix the prefered address.
-    pe_data[0x258:0x258 + 8] = struct.pack('<Q', 0x100_000)
+    pe_data[0x258:0x258 + 8] = struct.pack('<Q', BIOS_TARGET_ADDRESS)
     # make the alignment and init_size really high
 
     # We do not need to do any more for UEFI as we already hooked it's
@@ -119,7 +119,7 @@ def add_data(pe_data_orig, data, apply_bios_patch=True, apply_uefi_patch=True):
     # an instruction.
 
     if apply_bios_patch:
-        new_code32 = 0x100_000 + offset + _code32 - text_start
+        new_code32 = BIOS_TARGET_ADDRESS + offset + _code32 - text_start
         pe_data[0x214:0x214 + 4] = struct.pack('<I', new_code32)
 
     return pe_data

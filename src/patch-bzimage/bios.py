@@ -2,6 +2,7 @@
 Function to identify where to patch to take control post kernel decompression.
 """
 from binsearch import FixedBytes, SkipBytes, BinSearch
+from consts import BIOS_TARGET_ADDRESS
 
 
 def bios_patch(pe_data, offset, text_offset=0x5000, bios_start=0):
@@ -53,10 +54,9 @@ def bios_patch(pe_data, offset, text_offset=0x5000, bios_start=0):
         raise Exception('pattern matching bios sequence failed!')
 
     # Our takeover code.
-    # 0x5000 is the start of .text
-    target_addr = 0x100_000 + offset + bios_start - text_offset
+    target_addr = BIOS_TARGET_ADDRESS + offset + bios_start - text_offset
 
     # we'll be jumping back down to an old mapping at a fixed address.
-    start = 0x100_000 + matches[0][0] + match_offset - text_offset
+    start = BIOS_TARGET_ADDRESS + matches[0][0] + match_offset - text_offset
 
     return (start, target_addr)
