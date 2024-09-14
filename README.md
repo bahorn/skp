@@ -29,17 +29,18 @@ Help:
 ```
 just --list
 Available recipes:
-    clean         # Clean the Project
-    default       # List Commands
+    clean                             # Clean the Project
+    default                           # List Commands
     easylkb version kconfig=(BASEDIR / "configs/test.KConfig") # Use easylkb to build a kernel
-    get-grub-uefi # Download the Ubuntu's UEFI build of GRUB
-    get-rootfs    # Download OpenWRTs rootfs
+    get-grub-uefi                     # Download the Ubuntu's UEFI build of GRUB
+    get-rootfs                        # Download OpenWRTs rootfs
     patch-kernel kernel=env("SOURCE_KERNEL") payload=env("PAYLOAD") # Patch a kernel
-    run-bios      # Run a Kernel via BIOS
-    run-grub-bios # Run the kernel via a BIOS grub rescue image
-    run-grub-uefi # Run the Kernel via UEFI GRUB
-    run-uefi      # Run a Kernel via UEFI with OVMF
-    setup         # Install dependencies to build the project
+    run-bios                          # Run a Kernel via BIOS
+    run-grub-bios                     # Run the kernel via a BIOS grub rescue image
+    run-grub-uefi                     # Run the Kernel via UEFI GRUB
+    run-uefi                          # Run a Kernel via UEFI with OVMF
+    setup                             # Install dependencies to build the project
+    test-batch payload=env("PAYLOAD") # Test a list of kernels
 ```
 
 
@@ -103,6 +104,26 @@ Adjust the version to try other versions, and you can also change the kconfig as
 well.
 The output kernel will be in
 `./tools/easylkb/kernel/linux-VERSION/arch/x86/boot/bzImage`.
+
+## Testing
+
+If you want to test a batch of kernels and see if they all boot correctly with
+the patch you can use the `just test-batch` command.
+
+Create a file containing the paths to each kernel you want to test, then run
+`just test-batch kernels.lst` and it will use `./src/scripts/verify.py` to tell
+you which kernels failed to boot.
+
+A timeout of 15 seconds is used for each kernel, which might not be enough.
+You can change it in `./src/test-batch.sh`.
+
+An example list of kernels looks like:
+```
+./samples/kernels/vmlinuz-6.8.0-41-generic
+./tools/easylkb/kernel/linux-6.10/arch/x86/boot/bzImage
+./tools/easylkb/kernel/linux-6.9/arch/x86/boot/bzImage
+./tools/easylkb/kernel/linux-6.0/arch/x86/boot/bzImage
+```
 
 ## Techniques
 

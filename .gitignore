@@ -15,3 +15,4 @@ src/runtime/stage2/runtime.h
 priv
 *.bzimage
 *.img
+kernels.lst

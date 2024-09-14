@@ -133,3 +133,7 @@ clean:
     -rm -r {{INTERMEDIATE}}
     -rm {{patched_kernel}}
     -rm -r {{grub_root}}
+
+# Test a list of kernels
+test-batch test_kernel_list payload=env("PAYLOAD"):
+    cat {{test_kernel_list}} | xargs -I HERE ./src/test-batch.sh HERE {{payload}}
