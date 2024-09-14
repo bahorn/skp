@@ -200,7 +200,10 @@ kernel isn't relocatable is wrong as well as it seems to contradict [3]:
 > A non-relocatable kernel will unconditionally move itself and to run at this
 > address.
 
-Though there might be historical reasons for this.
+Though reading that, it sounds like the kernel is relocating itself to do
+in-place decompression, which matches up with
+`arch/x86/boot/compressed/head_64.S` (lines 310 to 450 in the 6.10 tree).
+So maybe GRUB is doing the right thing?
 
 If you care about infecting LKMs, I did a seperate project reimplementing
 another old phrack article that can do that. [9]
