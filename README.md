@@ -29,18 +29,18 @@ Help:
 ```
 just --list
 Available recipes:
-    clean                             # Clean the Project
-    default                           # List Commands
+    clean                                              # Clean the Project
+    default                                            # List Commands
     easylkb version kconfig=(BASEDIR / "configs/test.KConfig") # Use easylkb to build a kernel
-    get-grub-uefi                     # Download the Ubuntu's UEFI build of GRUB
-    get-rootfs                        # Download OpenWRTs rootfs
+    get-grub-uefi                                      # Download the Ubuntu's UEFI build of GRUB
+    get-rootfs                                         # Download OpenWRTs rootfs
     patch-kernel kernel=env("SOURCE_KERNEL") payload=env("PAYLOAD") # Patch a kernel
-    run-bios                          # Run a Kernel via BIOS
-    run-grub-bios                     # Run the kernel via a BIOS grub rescue image
-    run-grub-uefi                     # Run the Kernel via UEFI GRUB
-    run-uefi                          # Run a Kernel via UEFI with OVMF
-    setup                             # Install dependencies to build the project
-    test-batch payload=env("PAYLOAD") # Test a list of kernels
+    run-bios                                           # Run a Kernel via BIOS
+    run-grub-bios                                      # Run the kernel via a BIOS grub rescue image
+    run-grub-uefi                                      # Run the Kernel via UEFI GRUB
+    run-uefi                                           # Run a Kernel via UEFI with OVMF
+    setup                                              # Install dependencies to build the project
+    test-batch test_kernel_list payload=env("PAYLOAD") # Test a list of kernels
 ```
 
 
@@ -111,10 +111,10 @@ If you want to test a batch of kernels and see if they all boot correctly with
 the patch you can use the `just test-batch` command.
 
 Create a file containing the paths to each kernel you want to test, then run
-`just test-batch kernels.lst` and it will use `./src/scripts/verify.py` to tell
-you which kernels failed to boot.
+`just test-batch kernels.lst payload.bin` and it will use
+`./src/scripts/verify.py` to tell you which kernels failed to boot.
 
-A timeout of 15 seconds is used for each kernel, which might not be enough.
+A timeout of 30 seconds is used for each kernel, which might not be enough.
 You can change it in `./src/test-batch.sh`.
 
 An example list of kernels looks like:
