@@ -83,6 +83,10 @@ The default configuration requires one of the following to start the VM:
 * attaching gdb with `gdb -ex "target remote localhost:1234"`
 * connecting to `localhost:55555` with netcat to start the virtual machine.
 
+Prefixing the command with `extra_qemu=""`, e.g `just extra_qemu="" run-uefi`
+will also autostart the kernel (and also allows extra qemu arguments)
+
+
 If you:
 * need a rootfs, run `just get-rootfs` to download one from OpenWRT.
 * want to run this under uefi GRUB, run `just get-grub-uefi` to setup Ubuntu's

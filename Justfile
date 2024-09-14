@@ -6,6 +6,7 @@ rootfs := env("ROOTFS", BASEDIR / "samples/rootfs/openwrt-rootfs.img")
 patched_kernel := env("PATCHED_KERNEL", BASEDIR / "samples/patched-kernel.bzimage")
 grub_root := env("GRUB_ROOT", BASEDIR / "samples/grub-root")
 config_dir := BASEDIR / "configs"
+extra_qemu := "-S"
 
 # Extra flags to patch-bzimage, can disable uefi or bios patching with this.
 export EXTRA_PATCH := env("EXTRA_PATCH", "")
@@ -31,13 +32,13 @@ run-uefi :
         -kernel {{patched_kernel}} \
         -nographic \
         -gdb tcp::1234 \
-        -S \
         -append "console=ttyS0,9600 root=/dev/sda" \
         -monitor tcp:127.0.0.1:55555,server,nowait \
         -netdev user,id=network0 \
         -device e1000,netdev=network0,mac=52:54:00:12:34:56 \
         -smbios type=0,uefi=on \
-        -bios {{ovmffw}}
+        -bios {{ovmffw}} \
+        {{extra_qemu}}
 
 # Run a Kernel via BIOS
 run-bios:
@@ -48,11 +49,11 @@ run-bios:
         -kernel {{patched_kernel}} \
         -nographic \
         -gdb tcp::1234 \
-        -S \
         -append "console=ttyS0,9600 root=/dev/sda" \
         -monitor tcp:127.0.0.1:55555,server,nowait \
         -netdev user,id=network0 \
-        -device e1000,netdev=network0,mac=52:54:00:12:34:56
+        -device e1000,netdev=network0,mac=52:54:00:12:34:56 \
+        {{extra_qemu}}
 
 # Run the Kernel via UEFI GRUB
 run-grub-uefi:
@@ -69,12 +70,12 @@ run-grub-uefi:
         -m 4G \
         -nographic \
         -gdb tcp::1234 \
-        -S \
         -monitor tcp:127.0.0.1:55555,server,nowait \
         -netdev user,id=network0 \
         -device e1000,netdev=network0,mac=52:54:00:12:34:56 \
         -smbios type=0,uefi=on \
-        -bios {{ovmffw}}
+        -bios {{ovmffw}} \
+        {{extra_qemu}}
 
 # Run the kernel via a BIOS grub rescue image
 run-grub-bios:
@@ -94,7 +95,8 @@ run-grub-bios:
         -S \
         -monitor tcp:127.0.0.1:55555,server,nowait \
         -netdev user,id=network0 \
-        -device e1000,netdev=network0,mac=52:54:00:12:34:56
+        -device e1000,netdev=network0,mac=52:54:00:12:34:56 \
+        {{extra_qemu}}
 
 # Patch a kernel
 patch-kernel kernel=env("SOURCE_KERNEL") payload=env("PAYLOAD"):
