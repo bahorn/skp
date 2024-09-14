@@ -143,10 +143,10 @@ which patches the code to jump to the decompressed kernel to then call our code
 to patch the kernel.
 We jump to our code by going to `0x100_000 + offset - start of .text`.
 
-This is done as page tables are setup at this point, and will cut off our
+This is done as the kernel relocates itself at this point, and will cut off our
 appended data from being accessed relatively.
-But there remains the mapping at 0x100_000, which we can use if we set the
-`pref_address` in the x86 boot protocol [3].
+But there remains the original mapping 0x100_000, which we can use if we set the
+`pref_address` and disable relocation in the x86 boot protocol [3].
 
 Our code here will then copy the remaining data into a known cavity in the
 kernel image, and hook an initcall to transfer control to it.
