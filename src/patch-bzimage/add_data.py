@@ -9,6 +9,20 @@ from utils import pad_size, pad
 from bios import bios_patch
 
 
+def get_text_start(pe):
+    text_offset = 0
+    text_start = 0
+    for section in pe.sections:
+        if section.Name != b'.text\x00\x00\x00':
+            continue
+
+        text_offset = section.__file_offset__
+        text_start = section.PointerToRawData
+        break
+
+    return text_offset, text_start
+
+
 def add_data(pe_data_orig, data, apply_bios_patch=True, apply_uefi_patch=True):
     """
     Add a new section to store our patch in the PE, then append our data, and
@@ -32,16 +46,7 @@ def add_data(pe_data_orig, data, apply_bios_patch=True, apply_uefi_patch=True):
 
     # Need some offsets for patching
     last_offset = pe.sections[-1].__file_offset__ + 0x28
-
-    text_offset = 0
-    text_start = 0
-    for section in pe.sections:
-        if section.Name != b'.text\x00\x00\x00':
-            continue
-
-        text_offset = section.__file_offset__
-        text_start = section.PointerToRawData
-        break
+    text_offset, text_start = get_text_start(pe)
 
     # Now we update the headers
     pe.FILE_HEADER.NumberOfSections += 1
@@ -63,6 +68,7 @@ def add_data(pe_data_orig, data, apply_bios_patch=True, apply_uefi_patch=True):
     if apply_uefi_patch:
         new_entrypoint = uefi_offset + bl.get_key(b'uefi_e\x00')
         pe.OPTIONAL_HEADER.AddressOfEntryPoint = new_entrypoint
+
     pe_data = bytearray(pe.write())
 
     called_from = uefi_offset + bl.get_key_offset(b'uefi_o\x00') + 4
@@ -105,19 +111,18 @@ def add_data(pe_data_orig, data, apply_bios_patch=True, apply_uefi_patch=True):
     pe_data[last_offset + 20:last_offset + 20 + 4] = \
         struct.pack('<I', offset)
 
-    # Now we want to disable relocation so the kernel is always at its prefered
-    # address with various bootloaders.
-    pe_data[0x234] = 0
-    # And fix the prefered address.
-    pe_data[0x258:0x258 + 8] = struct.pack('<Q', BIOS_TARGET_ADDRESS)
-    # make the alignment and init_size really high
-
     # We do not need to do any more for UEFI as we already hooked it's
     # entrypoint, but need to now deal with BIOS.
 
-    # Our BIOS Patch to transfer control, we use a code32_start hook to modify
-    # an instruction.
+    # Now we want to disable relocation so the kernel is always at its prefered
+    # address with various BIOS bootloaders.
+    pe_data[0x234] = 0
+    # And fix the prefered address.
+    pe_data[0x258:0x258 + 8] = struct.pack('<Q', BIOS_TARGET_ADDRESS)
 
+    # Finally we hook code32_start to run some code that will modify the jmp to
+    # the kernel after it is decompressed.
+    # If this not applied the kernel will function normally on this bootpath.
     if apply_bios_patch:
         new_code32 = BIOS_TARGET_ADDRESS + offset + _code32 - text_start
         pe_data[0x214:0x214 + 4] = struct.pack('<I', new_code32)
