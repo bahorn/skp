@@ -27,6 +27,7 @@ You will need to install the [`just` command runner](https://just.systems).
 
 Help:
 ```
+just --list
 Available recipes:
     clean         # Clean the Project
     default       # List Commands
@@ -35,9 +36,9 @@ Available recipes:
     get-rootfs    # Download OpenWRTs rootfs
     patch-kernel kernel=env("SOURCE_KERNEL") payload=env("PAYLOAD") # Patch a kernel
     run-bios      # Run a Kernel via BIOS
-    run-grub-bios # BIOS grub
+    run-grub-bios # Run the kernel via a BIOS grub rescue image
     run-grub-uefi # Run the Kernel via UEFI GRUB
-    run-ovmf      # Run a Kernel via UEFI with OVMF
+    run-uefi      # Run a Kernel via UEFI with OVMF
     setup         # Install dependencies to build the project
 ```
 
@@ -73,7 +74,7 @@ There is also support for two positional arguments to change the source kernel
 and payload instead of via the envvars.
 
 You can then the following to test it out:
-* `just run-ovmf`
+* `just run-uefi`
 * `just run-bios`
 * `just run-grub-uefi`
 * `just run-grub-bios`

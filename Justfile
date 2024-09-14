@@ -23,7 +23,7 @@ setup:
     ./tools/setup.sh
 
 # Run a Kernel via UEFI with OVMF
-run-ovmf :
+run-uefi :
     qemu-system-x86_64 \
         -accel kvm \
         -hda {{rootfs}} \
@@ -76,7 +76,7 @@ run-grub-uefi:
         -smbios type=0,uefi=on \
         -bios {{ovmffw}}
 
-# BIOS grub
+# Run the kernel via a BIOS grub rescue image
 run-grub-bios:
     -rm -r {{grub_root}}
     mkdir -p {{grub_root}}/boot/grub
