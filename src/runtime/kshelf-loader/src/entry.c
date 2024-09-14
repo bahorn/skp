@@ -255,6 +255,13 @@ void _start(unsigned long text, int via_initcall)
     kallsyms_lookup_name = (kallsyms_lookup_name_t) ((void *)text + KALLSYMS_OFFSET);
     _printk = (_printk_t) kallsyms_lookup_name("_printk");
     vmalloc = (vmalloc_t) kallsyms_lookup_name("vmalloc");
+
+    /* vmalloc became a macro in 6.10, so working around that. */
+    if (vmalloc == NULL) {
+        // skips any alloc hooks.
+        vmalloc = (vmalloc_t) kallsyms_lookup_name("vmalloc_noprof");
+    }
+
     set_memory_ro = (set_memory_ro_t) kallsyms_lookup_name("set_memory_ro");
     set_memory_x = (set_memory_x_t) kallsyms_lookup_name("set_memory_x");
 
