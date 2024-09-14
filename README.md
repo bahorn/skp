@@ -242,6 +242,12 @@ It finds `kallsyms_lookup_name()` in that shellcode, which is what you should do
 if you want to make the patching code smaller and not require using
 `vmlinux-to-elf`.
 
+If the kernel is compiled with KASAN, the patch sometimes seems sometimes
+trigger a `global-out-of-bounds`, when calling a function with one of the
+payloads strings as an argument.
+Noticed this only in 6.10, wasn't sure if there was some changes related to
+KASAN here as my builds for 6.9 also had KASAN enabled.
+
 On my remaining list todo is the following:
 * Code cleanup, src/patch-bzimage is a bit of a mess right now.
 * Figure out why 5.15 segfaults with the Runtime hook. I need to git bisect a
