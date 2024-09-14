@@ -6,6 +6,14 @@ from elftools.elf.elffile import ELFFile
 WANT = 0x00_01_00_00
 
 
+def test(data, start, end):
+    for i in range(start, end):
+        if data[i] != 0xcc:
+            return False
+
+    return True
+
+
 def main():
     fp = open(sys.argv[1], 'rb')
     data = fp.read()
@@ -14,18 +22,25 @@ def main():
 
     f = ELFFile(fp)
 
-    rodata = f.get_section_by_name('.rodata')
-    text = f.get_section_by_name('.text')
+    rodata = f.get_section_by_name('.rodata').header['sh_offset']
+    text = f.get_section_by_name('.text').header['sh_offset']
 
-    spot = rodata.header['sh_offset'] - text.header['sh_offset']
-
+    spot = rodata - text
     start = spot - WANT
     end = spot
 
-    for i in range(start, end):
-        assert(data[i] == 0xcc)
+    if test(data, start, end):
+        print(hex(start))
+        return
 
-    print(hex(spot - WANT))
+    start = rodata - WANT
+    end = rodata
+
+    if test(data, start, end):
+        print(hex(start))
+        return
+
+    raise Exception('FAILURE')
 
 
 if __name__ == "__main__":
