@@ -91,8 +91,9 @@ If you:
 A build cache is in `intermediate/SHASUM_OF_KERNEL` which stores a copy of the
 kernels kallsyms and internal ELF.
 
-If you need a kernel, easylkb is integrated, which you can use it via
-`just easylkb 6.8` and get a working 6.8 kernel to test with.
+If you need a kernel, [easylkb](https://github.com/deepseagirl/easylkb) is
+integrated, which you can use it via `just easylkb 6.8` and get a working 6.8
+kernel to test with.
 Adjust the version to try other versions, and you can also change the kconfig as
 well.
 The output kernel will be in
