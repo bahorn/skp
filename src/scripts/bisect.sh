@@ -4,10 +4,12 @@ export LINUX_PATH=$1
 export TYPE=$2
 export TIMEOUT=30
 
-/media/a/misc/git/tmpout-submissions/skp/tools/easylkb/easylkb.py \
+rm $LINUX_PATH/.config $LINUXPATH/.config.old $LINUX_PATH.config
+
+./tools/easylkb/easylkb.py \
     -p $LINUX_PATH \
     -cm \
-    --kconfig ./configs/config-ubuntu-no-modules.kconfig
+    --kconfig `pwd`/configs/test.KConfig
 
 # clean else we'll have 10gigs of kernel elfs, and makes checking for the
 # patched kernel easier
