@@ -250,8 +250,8 @@ KASAN here as my builds for 6.9 also had KASAN enabled.
 
 On my remaining list todo is the following:
 * Code cleanup, src/patch-bzimage is a bit of a mess right now.
-* Figure out why 5.15 segfaults with the Runtime hook. I need to git bisect a
-  ton of kernels. Doing a vfs hook like pcileech might be a suitable way of
+* Figure out why 5.15 segfaults with the Runtime hook. See #1 for my notes on
+  this. Doing a vfs hook like pcileech might be a suitable way of
   fixing this.
 * Maybe support older kernels. Unsure if I'll bother, as the issue is dealing
   with things like symbols being renamed, etc. I only ever want to care about
