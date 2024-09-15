@@ -132,7 +132,6 @@ broke things.
 
 First, setup a script (`wrapper.sh`) in the directory of the kernel:
 ```
-CURR=`pwd`
 cd PATH_TO_SKP && ./src/scripts/bisect.sh $1 uefi
 ```
 
@@ -142,7 +141,7 @@ export PAYLOAD=path_to_payload
 git bisect start
 git bisect old v5.15
 git bisect new v5.16
-git bisect run ./wrapper.sh
+git bisect run ./wrapper.sh `pwd`
 ```
 
 Which should find the commit that introduced / fixed the issue in a hour or two.
