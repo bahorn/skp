@@ -6,6 +6,7 @@ def main():
     parser = argparse.ArgumentParser(prog='verify')
     parser.add_argument('logfile')
     parser.add_argument('--invert', action='store_true')
+    parser.add_argument('--bisect', action='store_true')
 
     args = parser.parse_args()
 
@@ -41,7 +42,11 @@ def main():
     if args.invert:
         bad = not bad
 
-    sys.exit({True: 0, False: -1}[not bad])
+    res = {True: 0, False: -1}
+    if args.bisect:
+        res = {True: 0, False: 1}
+
+    sys.exit(res[not bad])
 
 
 if __name__ == "__main__":
