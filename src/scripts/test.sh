@@ -7,4 +7,4 @@ just extra_qemu="" run-$TYPE > /tmp/log.txt
 EOF
 
 # Need to checkout the log for several messages
-python3 src/scripts/verify.py /tmp/log.txt
+python3 ./src/scripts/verify.py /tmp/log.txt

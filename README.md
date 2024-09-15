@@ -125,6 +125,33 @@ An example list of kernels looks like:
 ./tools/easylkb/kernel/linux-6.0/arch/x86/boot/bzImage
 ```
 
+### Bisecting Kernels
+
+You'll probably end up needing to bisect changes to determine which changes
+broke things.
+
+First, setup a script (`wrapper.sh`) in the directory of the kernel:
+```
+CURR=`pwd`
+cd PATH_TO_SKP && ./src/scripts/bisect.sh $1 uefi
+```
+
+Then you can do a bisect like so:
+```
+export PAYLOAD=path_to_payload
+git bisect start
+git bisect old v5.15
+git bisect new v5.16
+git bisect run ./wrapper.sh
+```
+
+Which should find the commit that introduced / fixed the issue in a hour or two.
+
+The bisect.sh script does assume old is the one that causes the issue, and new
+is the one where it is fixed.
+You can change this behaviour by removing the `--invert` in
+`./src/scripts/bisect.sh`
+
 ## Techniques
 
 This modifies two paths to boot the kernel.
