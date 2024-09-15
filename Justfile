@@ -7,6 +7,7 @@ patched_kernel := env("PATCHED_KERNEL", BASEDIR / "samples/patched-kernel.bzimag
 grub_root := env("GRUB_ROOT", BASEDIR / "samples/grub-root")
 config_dir := BASEDIR / "configs"
 extra_qemu := "-S"
+kernel_cmdline := "\"console=ttyS0,9600 root=/dev/sda\""
 
 # Extra flags to patch-bzimage, can disable uefi or bios patching with this.
 export EXTRA_PATCH := env("EXTRA_PATCH", "")
@@ -32,7 +33,7 @@ run-uefi :
         -kernel {{patched_kernel}} \
         -nographic \
         -gdb tcp::1234 \
-        -append "console=ttyS0,9600 root=/dev/sda" \
+        -append {{kernel_cmdline}} \
         -monitor tcp:127.0.0.1:55555,server,nowait \
         -netdev user,id=network0 \
         -device e1000,netdev=network0,mac=52:54:00:12:34:56 \
@@ -49,7 +50,7 @@ run-bios:
         -kernel {{patched_kernel}} \
         -nographic \
         -gdb tcp::1234 \
-        -append "console=ttyS0,9600 root=/dev/sda" \
+        -append {{kernel_cmdline}} \
         -monitor tcp:127.0.0.1:55555,server,nowait \
         -netdev user,id=network0 \
         -device e1000,netdev=network0,mac=52:54:00:12:34:56 \
