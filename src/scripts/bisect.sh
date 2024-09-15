@@ -9,11 +9,19 @@ export TIMEOUT=30
     -cm \
     --kconfig ./configs/config-ubuntu-no-modules.kconfig
 
+# clean else we'll have 10gigs of kernel elfs, and makes checking for the
+# patched kernel easier
+just clean
+
 # patch the kernel
 just patch-kernel \
     $LINUX_PATH/arch/x86/boot/bzImage \
     $PAYLOAD
 
+# if the patched_kernel does not exist, it did not build correctly.
+if [ ! -f ./samples/patched-kernel.bzimage ]; then
+    exit -1
+fi
 
 cat << EOF | timeout $TIMEOUT bash
 just extra_qemu="" run-$TYPE > /tmp/log.txt
