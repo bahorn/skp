@@ -32,6 +32,7 @@ Available recipes:
     clean                                              # Clean the Project
     default                                            # List Commands
     easylkb version kconfig=(BASEDIR / "configs/test.KConfig") # Use easylkb to build a kernel
+    gdb                                                # Connect to the GDB server
     get-grub-uefi                                      # Download the Ubuntu's UEFI build of GRUB
     get-rootfs                                         # Download OpenWRTs rootfs
     patch-kernel kernel=env("SOURCE_KERNEL") payload=env("PAYLOAD") # Patch a kernel
@@ -42,7 +43,6 @@ Available recipes:
     setup                                              # Install dependencies to build the project
     test-batch test_kernel_list payload=env("PAYLOAD") # Test a list of kernels
 ```
-
 
 To setup the virtualenv and dependencies:
 ```

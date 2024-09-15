@@ -138,3 +138,7 @@ clean:
 # Test a list of kernels
 test-batch test_kernel_list payload=env("PAYLOAD"):
     cat {{test_kernel_list}} | xargs -I HERE ./src/test-batch.sh HERE {{payload}}
+
+# Connect to the GDB server
+gdb:
+    gdb -ex "target remote localhost:1234"
