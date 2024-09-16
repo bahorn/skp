@@ -27,7 +27,9 @@ _uefi_entry:
 
     mov rdi, rax
     mov rsi, 0
+    inc dword gs:__preempt_count
     call _runtime_hook
+    dec dword gs:__preempt_count
 
 ; get the registers back to normal
     pop r11

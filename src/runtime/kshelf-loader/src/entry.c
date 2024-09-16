@@ -279,7 +279,6 @@ void _start(unsigned long text, int via_initcall)
         regulator_init_complete();
     } else {
         _printk("Called via UEFI Runtime hook\n");
-
     }
 
     run_elf(payload, payload_len);

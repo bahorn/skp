@@ -5,6 +5,7 @@ build:
 		-D _startup_64_offset=`python3 ../../scripts/find_symbol.py $(SYMBOLS) startup_64` \
 		-D runtime_hook_len=`wc -c < ../kshelf-loader/runtime_hook.bin` \
 		-D _initcall_offset=`python3 ../../scripts/find_initcall.py $(SYMBOLS)` \
+		-D __preempt_count=`python3 ../../scripts/find_preempt_count.py $(SYMBOLS)` \
 		-f bin ./stage2.asm \
 		-o stage2.bin
 
