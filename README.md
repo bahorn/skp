@@ -4,8 +4,8 @@ This is a PoC tool to patch x86 Linux kernel bzImages to load a kSHELF.
 This is a modern version of a the idea from Phrack 60-8 [1], but doing a very
 different style of patches.
 
-This supports 5.15+ for the BIOS boot path and 5.16+ for the UEFI runtime hook
-(due to a bug I haven't yet figured out in older kernels).
+This supports 5.15+ for both UEFI and BIOS, tested up to 6.11 (which was
+released today at time of writing).
 
 Primarily tested with kernel images from Ubuntu, and my testing KConfig is
 derived from the default Ubuntu configuration.
@@ -276,9 +276,6 @@ KASAN here as my builds for 6.9 also had KASAN enabled.
 
 On my remaining list todo is the following:
 * Code cleanup, src/patch-bzimage is a bit of a mess right now.
-* Figure out why 5.15 segfaults with the Runtime hook. See #1 for my notes on
-  this. Doing a vfs hook like pcileech might be a suitable way of
-  fixing this.
 * Maybe support older kernels. Unsure if I'll bother, as the issue is dealing
   with things like symbols being renamed, etc. I only ever want to care about
   kernels released in the last 5 years. 20.04 is the furthest I want to go back
