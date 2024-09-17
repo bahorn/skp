@@ -1,6 +1,3 @@
-; This is used by the BIOS and UEFI ExitBootServices Direct patch
-    db "initcall_runtime_thunk", 0
-
 ; This is the code that will be copied into a cavity into the kernel image.
 ; So if get here we got patched into the kernel and called via an initcall.
 _initcall_runtime_thunk:

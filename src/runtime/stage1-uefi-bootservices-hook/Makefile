@@ -1,4 +1,4 @@
-CFLAGS=-fPIE -fno-builtin -nostdlib -fno-plt -O0 -I/usr/include/efi -mabi=ms
+CFLAGS=-fPIE -fno-builtin -nostdlib -fno-plt -fno-common -O0 -I/usr/include/efi -mabi=ms
 LDFLAGS=-T./linker.lds -pie
 
 build:
@@ -9,9 +9,9 @@ build:
 		$(EXTRA_STAGE2_DEFINE) \
 		$(CFLAGS) \
 		-c main.c -o main.o
-	$(LD) $(LDFLAGS) ./main.o -o bootservices_hook.bin
+	$(LD) -r -o merged.o ./main.o ../stage2/stage2.o
+	$(LD) $(LDFLAGS) ./merged.o -o bootservices_hook.bin
 
 
 clean:
-	-rm main.o bootservices_hook.bin
-
+	-rm main.o merged.o bootservices_hook.bin

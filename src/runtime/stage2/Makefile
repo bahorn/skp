@@ -6,11 +6,8 @@ build:
 		-D runtime_hook_len=`wc -c < ../kshelf-loader/runtime_hook.bin` \
 		-D _initcall_offset=`python3 ../../scripts/find_initcall.py $(SYMBOLS)` \
 		-D __preempt_count=`python3 ../../scripts/find_preempt_count.py $(SYMBOLS)` \
-		-f bin ./stage2.asm \
-		-o stage2.bin
-
-	xxd -i runtime.bin > runtime.h
-	python3 ./get-offset.py ./runtime.bin >> runtime.h
+		-f elf64 ./stage2.asm \
+		-o stage2.o
 
 clean:
-	-rm thunk.bin runtime.h runtime.bin
+	-rm stage2.o

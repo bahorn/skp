@@ -50,4 +50,3 @@ _uefi_entry:
     jmp rax
 
     align 32, db 0
-
