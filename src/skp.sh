@@ -21,7 +21,6 @@ fi
 # compile the payload
 PAYLOAD=$REAL_PAYLOAD \
     SYMBOLS=$INTERMEDIATE/kallsyms \
-    UEFI_DIRECT_PATCH=true \
     LOAD_OFFSET=`python3 ./src/scripts/find_space.py $INTERMEDIATE/curr.elf` \
     make -C ./src/runtime
 
