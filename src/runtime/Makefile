@@ -6,7 +6,7 @@ build:
 	SYMBOLS=$(SYMBOLS) LOAD_OFFSET=$(LOAD_OFFSET) make -C ./stage1-uefi-bootservices-hook
 	SYMBOLS=$(SYMBOLS) LOAD_OFFSET=$(LOAD_OFFSET) \
 			make -C ./stage0/
-	cat ./stage0/stage0.bin ./stage1-uefi-bootservices-hook/bootservices_hook.bin > ./all.bin
+	cp ./stage0/stage0.bin ./all.bin
 	python3 fill_in.py ./all.bin
 
 
