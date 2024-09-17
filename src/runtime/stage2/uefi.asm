@@ -27,6 +27,7 @@ _uefi_entry:
 
     mov rdi, rax
     mov rsi, 0
+    mov rdx, _kallsyms_offset
     inc dword gs:__preempt_count
     call _kshelf_loader
     dec dword gs:__preempt_count

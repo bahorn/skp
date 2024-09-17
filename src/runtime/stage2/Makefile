@@ -5,6 +5,7 @@ build:
 		-D _startup_64_offset=`python3 ../../scripts/find_symbol.py $(SYMBOLS) startup_64` \
 		-D _initcall_offset=`python3 ../../scripts/find_initcall.py $(SYMBOLS)` \
 		-D __preempt_count=`python3 ../../scripts/find_preempt_count.py $(SYMBOLS)` \
+		-D _kallsyms_offset=`python3 ../../scripts/find_symbol.py $(SYMBOLS) kallsyms_lookup_name` \
 		-f elf64 ./stage2.asm \
 		-o stage2.o
 

@@ -5,4 +5,5 @@ _initcall_runtime_thunk:
 ; In this case, it's RIP relative back.
     lea rdi, [rel $-_stage1_offset-_startup_64_offset]
     mov rsi, 1
+    mov rdx, _kallsyms_offset
     jmp _kshelf_loader

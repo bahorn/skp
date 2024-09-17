@@ -85,7 +85,6 @@ LD=ld
 build:
 	$(CC) \
 		$(CFLAGS) \
-		-D KALLSYMS_OFFSET=`python3 ../../scripts/find_symbol.py $(SYMBOLS) kallsyms_lookup_name` \
 		-c ./src/entry.c -o kshelf_loader.o
 	$(LD) $(LDFLAGS) ./kshelf_loader.o -o kshelf_loader.bin
 
