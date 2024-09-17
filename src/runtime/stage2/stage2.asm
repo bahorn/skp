@@ -5,7 +5,7 @@ global runtime_bin_offset:data 4
 global runtime_bin_len:data 4
 
 
-%define runtime_hook_len _runtime_hook_end - _runtime_hook
+%define _kshelf_loader_len _kshelf_loader_end - _kshelf_loader
 
 _begin:
 
@@ -18,9 +18,9 @@ _start_stage2:
 %include "initcall.asm"
 
 ; We just append this.
-_runtime_hook:
-    incbin "../kshelf-loader/runtime_hook.bin"
-_runtime_hook_end:
+_kshelf_loader:
+    incbin "../kshelf-loader/kshelf_loader.bin"
+_kshelf_loader_end:
 
 ; Now our externals:
 runtime_bin:

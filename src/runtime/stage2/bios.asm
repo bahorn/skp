@@ -20,7 +20,7 @@ _bios_entry:
 ; %define _stage1_offset 0x01_30_00_00
     lea rsi, [rel _initcall_runtime_thunk]
     lea rdi, [rax + _stage1_offset]
-    mov rcx, runtime_hook_len + (_runtime_hook - _initcall_runtime_thunk)
+    mov rcx, _kshelf_loader_len + (_kshelf_loader - _initcall_runtime_thunk)
     rep movsb
 
 

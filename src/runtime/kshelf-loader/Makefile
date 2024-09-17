@@ -86,8 +86,8 @@ build:
 	$(CC) \
 		$(CFLAGS) \
 		-D KALLSYMS_OFFSET=`python3 ../../scripts/find_symbol.py $(SYMBOLS) kallsyms_lookup_name` \
-		-c ./src/entry.c -o main.o
-	$(LD) $(LDFLAGS) ./main.o -o runtime_hook.bin
+		-c ./src/entry.c -o kshelf_loader.o
+	$(LD) $(LDFLAGS) ./kshelf_loader.o -o kshelf_loader.bin
 
 clean:
-	-rm main.o runtime_hook.bin
+	-rm kshelf_loader.o kshelf_loader.bin
