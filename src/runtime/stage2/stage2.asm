@@ -9,3 +9,4 @@ BITS 64
 
 ; We just append this.
 _runtime_hook:
+    incbin "../kshelf-loader/runtime_hook.bin"

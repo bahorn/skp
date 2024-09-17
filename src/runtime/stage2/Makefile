@@ -9,7 +9,6 @@ build:
 		-f bin ./stage2.asm \
 		-o stage2.bin
 
-	cat ./stage2.bin ../kshelf-loader/runtime_hook.bin > runtime.bin
 	xxd -i runtime.bin > runtime.h
 	python3 ./get-offset.py ./runtime.bin >> runtime.h
 
