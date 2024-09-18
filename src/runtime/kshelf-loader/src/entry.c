@@ -245,8 +245,9 @@ void run_elf(void *elf, size_t len)
     run_tha_fun(start);
 }
 
-
+#ifdef PAYLOAD
 #include "../../payload.h"
+#endif
 
 /* Takes just the address of the _text section */
 __attribute__ ((section(".text.start")))
@@ -281,6 +282,11 @@ void _start(unsigned long text, int via_initcall, unsigned long kallsyms_offset)
         _printk("Called via UEFI Runtime hook\n");
     }
 
+#ifdef PAYLOAD
+    _printk("Running payload\n");
     run_elf(payload, payload_len);
+#else
+    _printk("No payload defined\n");
+#endif
     return;
 }

@@ -18,6 +18,8 @@ Currently relying on a private repo for the payloads, which will be GPL2'd soon
 You can probably get by with my older public version of
 [klude](https://github.com/bahorn/klude), just know I have fixed the major bugs
 in it now.
+You do not need to provide a payload, as the default behaviour is just to print
+some info during the kernels boot.
 
 ## Usage
 
@@ -29,24 +31,24 @@ Help:
 ```
 Available recipes:
     [Listing]
-    default                                            # List Commands
+    default       # List Commands
 
     [build]
-    clean                                              # Clean the Project
-    patch-kernel kernel=env("SOURCE_KERNEL") payload=env("PAYLOAD") # Patch a kernel
+    clean         # Clean the Project
+    patch-kernel kernel=env("SOURCE_KERNEL") payload=env("PAYLOAD", "") # Patch a kernel
 
     [run]
-    gdb                                                # Connect to the GDB server
-    run-bios                                           # Run a Kernel via BIOS
-    run-grub-bios                                      # Run the kernel via a BIOS grub rescue imagea
-    run-grub-uefi                                      # Run the Kernel via UEFI GRUB
-    run-uefi                                           # Run a Kernel via UEFI with OVMF
+    gdb           # Connect to the GDB server
+    run-bios      # Run a Kernel via BIOS
+    run-grub-bios # Run the kernel via a BIOS grub rescue imagea
+    run-grub-uefi # Run the Kernel via UEFI GRUB
+    run-uefi      # Run a Kernel via UEFI with OVMF
 
     [setup]
     easylkb version kconfig=(BASEDIR / "configs/test.KConfig") # Use easylkb to build a kernel
-    get-grub-uefi                                      # Download the Ubuntu's UEFI build of GRUB
-    get-rootfs                                         # Download OpenWRTs rootfs
-    setup                                              # Install dependencies to build the project
+    get-grub-uefi # Download the Ubuntu's UEFI build of GRUB
+    get-rootfs    # Download OpenWRTs rootfs
+    setup         # Install dependencies to build the project
 
     [testing]
     test-batch test_kernel_list payload=env("PAYLOAD") # Test a list of kernels

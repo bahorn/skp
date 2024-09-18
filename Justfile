@@ -107,11 +107,12 @@ run-grub-bios:
 
 # Patch a kernel
 [group('build')]
-patch-kernel kernel=env("SOURCE_KERNEL") payload=env("PAYLOAD"):
+patch-kernel kernel=env("SOURCE_KERNEL") payload=env("PAYLOAD", ""):
     mkdir -p {{INTERMEDIATE}}/`./tools/shasum.sh {{kernel}}`
-    ./src/skp.sh \
+
+    {{ if payload != "" { "PAYLOAD=" + payload  } else { "" } }} \
+        ./src/skp.sh \
         {{kernel}} \
-        {{payload}} \
         {{INTERMEDIATE}}/`./tools/shasum.sh {{kernel}}` \
         {{patched_kernel}}
 
@@ -136,7 +137,8 @@ get-grub-uefi:
 # Use easylkb to build a kernel
 [group('setup')]
 easylkb version kconfig=(BASEDIR / "configs/test.KConfig"):
-    cd ./tools/easylkb/ && python3 easylkb.py -k {{version}} --kconfig {{kconfig}} -dcm 
+    cd ./tools/easylkb/ && \
+        python3 easylkb.py -k {{version}} --kconfig {{kconfig}} -dcm 
 
 # Clean the Project
 [group('build')]
@@ -149,7 +151,8 @@ clean:
 # Test a list of kernels
 [group('testing')]
 test-batch test_kernel_list payload=env("PAYLOAD"):
-    cat {{test_kernel_list}} | xargs -I HERE ./src/scripts/test-batch.sh HERE {{payload}}
+    cat {{test_kernel_list}} | \
+        xargs -I HERE ./src/scripts/test-batch.sh HERE {{payload}}
 
 # Connect to the GDB server
 [group('run')]

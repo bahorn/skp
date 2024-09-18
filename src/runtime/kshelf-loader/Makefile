@@ -85,6 +85,7 @@ LD=ld
 build:
 	$(CC) \
 		$(CFLAGS) \
+		$(PAYLOAD) \
 		-c ./src/entry.c -o kshelf_loader.o
 	$(LD) $(LDFLAGS) ./kshelf_loader.o -o kshelf_loader.bin
 
