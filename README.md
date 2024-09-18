@@ -27,20 +27,28 @@ You will need to install the [`just` command runner](https://just.systems).
 
 Help:
 ```
-just --list
 Available recipes:
-    clean                                              # Clean the Project
+    [Listing]
     default                                            # List Commands
-    easylkb version kconfig=(BASEDIR / "configs/test.KConfig") # Use easylkb to build a kernel
-    gdb                                                # Connect to the GDB server
-    get-grub-uefi                                      # Download the Ubuntu's UEFI build of GRUB
-    get-rootfs                                         # Download OpenWRTs rootfs
+
+    [build]
+    clean                                              # Clean the Project
     patch-kernel kernel=env("SOURCE_KERNEL") payload=env("PAYLOAD") # Patch a kernel
+
+    [run]
+    gdb                                                # Connect to the GDB server
     run-bios                                           # Run a Kernel via BIOS
-    run-grub-bios                                      # Run the kernel via a BIOS grub rescue image
+    run-grub-bios                                      # Run the kernel via a BIOS grub rescue imagea
     run-grub-uefi                                      # Run the Kernel via UEFI GRUB
     run-uefi                                           # Run a Kernel via UEFI with OVMF
+
+    [setup]
+    easylkb version kconfig=(BASEDIR / "configs/test.KConfig") # Use easylkb to build a kernel
+    get-grub-uefi                                      # Download the Ubuntu's UEFI build of GRUB
+    get-rootfs                                         # Download OpenWRTs rootfs
     setup                                              # Install dependencies to build the project
+
+    [testing]
     test-batch test_kernel_list payload=env("PAYLOAD") # Test a list of kernels
 ```
 

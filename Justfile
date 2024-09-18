@@ -16,15 +16,18 @@ export EXTRA_PATCH := env("EXTRA_PATCH", "")
 export EXTRA_STAGE2_DEFINE := env("EXTRA_STAGE2_DEFINE", "-DDIRECT_PATCHING")
 
 # List Commands
+[group('Listing')]
 default:
   just --list
 
 # Install dependencies to build the project
+[group('setup')]
 setup:
     virtualenv -p python3 .venv
     ./tools/setup.sh
 
 # Run a Kernel via UEFI with OVMF
+[group('run')]
 run-uefi :
     qemu-system-x86_64 \
         -accel kvm \
@@ -42,6 +45,7 @@ run-uefi :
         {{extra_qemu}}
 
 # Run a Kernel via BIOS
+[group('run')]
 run-bios:
     qemu-system-x86_64 \
         -accel kvm \
@@ -57,6 +61,7 @@ run-bios:
         {{extra_qemu}}
 
 # Run the Kernel via UEFI GRUB
+[group('run')]
 run-grub-uefi:
     -rm -r {{grub_root}}
     mkdir -p {{grub_root}}/efi/boot {{grub_root}}/EFI/ubuntu
@@ -78,7 +83,8 @@ run-grub-uefi:
         -bios {{ovmffw}} \
         {{extra_qemu}}
 
-# Run the kernel via a BIOS grub rescue image
+# Run the kernel via a BIOS grub rescue imagea
+[group('run')]
 run-grub-bios:
     -rm -r {{grub_root}}
     mkdir -p {{grub_root}}/boot/grub
@@ -100,6 +106,7 @@ run-grub-bios:
         {{extra_qemu}}
 
 # Patch a kernel
+[group('build')]
 patch-kernel kernel=env("SOURCE_KERNEL") payload=env("PAYLOAD"):
     mkdir -p {{INTERMEDIATE}}/`./tools/shasum.sh {{kernel}}`
     ./src/skp.sh \
@@ -109,12 +116,14 @@ patch-kernel kernel=env("SOURCE_KERNEL") payload=env("PAYLOAD"):
         {{patched_kernel}}
 
 # Download OpenWRTs rootfs
+[group('setup')]
 get-rootfs:
     wget -O samples/rootfs/openwrt-rootfs.img.gz \
         https://downloads.openwrt.org/releases/23.05.4/targets/x86/64/openwrt-23.05.4-x86-64-generic-ext4-rootfs.img.gz
     cd samples/rootfs/ && gunzip openwrt-rootfs.img.gz
 
 # Download the Ubuntu's UEFI build of GRUB
+[group('setup')]
 get-grub-uefi:
     mkdir -p samples/grub/
     wget -O samples/grub/grub-ubuntu.deb https://launchpad.net/ubuntu/+archive/primary/+files/grub-efi-amd64-unsigned_2.12-5ubuntu4_amd64.deb
@@ -125,10 +134,12 @@ get-grub-uefi:
         rm -r control.tar.xz data.tar.xz debian-binary ./usr
 
 # Use easylkb to build a kernel
+[group('setup')]
 easylkb version kconfig=(BASEDIR / "configs/test.KConfig"):
     cd ./tools/easylkb/ && python3 easylkb.py -k {{version}} --kconfig {{kconfig}} -dcm 
 
 # Clean the Project
+[group('build')]
 clean:
     make -C ./src/runtime clean
     -rm -r {{INTERMEDIATE}}
@@ -136,9 +147,11 @@ clean:
     -rm -r {{grub_root}}
 
 # Test a list of kernels
+[group('testing')]
 test-batch test_kernel_list payload=env("PAYLOAD"):
     cat {{test_kernel_list}} | xargs -I HERE ./src/scripts/test-batch.sh HERE {{payload}}
 
 # Connect to the GDB server
+[group('run')]
 gdb:
     gdb -ex "target remote localhost:1234"
