@@ -107,14 +107,14 @@ run-grub-bios:
 
 # Patch a kernel
 [group('build')]
-patch-kernel kernel=env("SOURCE_KERNEL") payload=env("PAYLOAD", ""):
+patch-kernel kernel=env("SOURCE_KERNEL") payload=env("PAYLOAD", "") output=patched_kernel:
     mkdir -p {{INTERMEDIATE}}/`./tools/shasum.sh {{kernel}}`
 
     {{ if payload != "" { "PAYLOAD=" + payload  } else { "" } }} \
         ./src/skp.sh \
         {{kernel}} \
         {{INTERMEDIATE}}/`./tools/shasum.sh {{kernel}}` \
-        {{patched_kernel}}
+        {{output}}
 
 # Download OpenWRTs rootfs
 [group('setup')]
