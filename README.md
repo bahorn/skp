@@ -17,9 +17,13 @@ Currently relying on a private repo for the payloads, which will be GPL2'd soon
 (tm).
 You can probably get by with my older public version of
 [klude](https://github.com/bahorn/klude), just know I have fixed the major bugs
-in it now.
-You do not need to provide a payload, as the default behaviour is just to print
-some info during the kernels boot.
+in it now, and have made it use multiple sections due to `STRICT_RWX` being
+default in modern kernels.
+
+I have set this up to not need you to provide a payload, as the default
+behaviour is just to print some info during the kernels boot.
+You can modify the code in `src/runtime/kshelf-loader/` if you want to do
+anything more.
 
 ## Usage
 
