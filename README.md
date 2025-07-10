@@ -13,12 +13,9 @@ Other distros might do something that breaks this, though I hope not :)
 Make sure ftrace is enabled and you have `CONFIG_REGULATOR` as that is used in
 the initcall hook.
 
-Currently relying on a private repo for the payloads, which will be GPL2'd soon
-(tm).
-You can probably get by with my older public version of
-[klude](https://github.com/bahorn/klude), just know I have fixed the major bugs
-in it now, and have made it use multiple sections due to `STRICT_RWX` being
-default in modern kernels.
+
+The payloads can be compiled with
+[klude2](https://github.com/bahorn/klude2). Modify `src/sample` to change what it does. all kernel symbols are supported.
 
 I have set this up to not need you to provide a payload, as the default
 behaviour is just to print some info during the kernels boot.
