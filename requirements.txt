@@ -1,8 +1,8 @@
-capstone==5.0.1
+capstone==5.0.7
 keystone-engine==0.9.2
-lief==0.15.1
-lz4==4.3.3
-pefile==2023.2.7
-pyelftools==0.31
+lief==0.17.6
+lz4==4.4.5
+pefile==2024.8.26
+pyelftools==0.32
 python-lzo==1.15
-zstandard==0.23.0
+zstandard==0.25.0
