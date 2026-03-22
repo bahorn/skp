@@ -17,4 +17,5 @@ priv
 *.img
 kernels.lst
 /tools/vmlinux-to-elf
+/tools/easylkb
 /tmp
