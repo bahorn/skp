@@ -1,4 +1,0 @@
-[submodule "tools/easylkb"]
-	path = tools/easylkb
-    url = https://github.com/deepseagirl/easylkb
-    ignore = dirty
