@@ -1,13 +1,12 @@
 # These can be overridden!
 BASEDIR := shell("pwd")
 INTERMEDIATE := BASEDIR / "intermediate"
-ovmffw := env("OVMFFW", "/usr/share/OVMF/OVMF_CODE.fd")
+ovmffw := env("OVMFFW", "/usr/share/OVMF/OVMF_CODE_4M.fd")
 rootfs := env("ROOTFS", BASEDIR / "samples/rootfs/openwrt-rootfs.img")
 patched_kernel := env("PATCHED_KERNEL", BASEDIR / "samples/patched-kernel.bzimage")
 grub_root := env("GRUB_ROOT", BASEDIR / "samples/grub-root")
 config_dir := BASEDIR / "configs"
-extra_qemu := "-S"
-kernel_cmdline := "\"console=ttyS0,9600 root=/dev/sda\""
+extra_qemu := ""
 
 # Extra flags to patch-bzimage, can disable uefi or bios patching with this.
 export EXTRA_PATCH := env("EXTRA_PATCH", "")
@@ -28,20 +27,21 @@ setup:
 
 # Run a Kernel via UEFI with OVMF
 [group('run')]
-run-uefi :
+run-uefi:
+    cp /usr/share/OVMF/OVMF_VARS_4M.fd `pwd`/tmp/OVMF_VARS_4M.fd
     qemu-system-x86_64 \
         -accel kvm \
-        -hda {{rootfs}} \
         -m 4G \
         -kernel {{patched_kernel}} \
         -nographic \
         -gdb tcp::1234 \
-        -append {{kernel_cmdline}} \
+        -append "console=ttyS0,9600 root=/dev/vda" \
         -monitor tcp:127.0.0.1:55555,server,nowait \
         -netdev user,id=network0 \
         -device e1000,netdev=network0,mac=52:54:00:12:34:56 \
-        -smbios type=0,uefi=on \
-        -bios {{ovmffw}} \
+        -drive file={{rootfs}},format=raw,if=virtio,index=0 \
+        -drive if=pflash,format=raw,readonly=on,file=/usr/share/OVMF/OVMF_CODE_4M.fd \
+        -drive if=pflash,format=raw,file=`pwd`/tmp/OVMF_VARS_4M.fd \
         {{extra_qemu}}
 
 # Run a Kernel via BIOS
@@ -54,7 +54,7 @@ run-bios:
         -kernel {{patched_kernel}} \
         -nographic \
         -gdb tcp::1234 \
-        -append {{kernel_cmdline}} \
+        -append "console=ttyS0,9600 root=/dev/sda" \
         -monitor tcp:127.0.0.1:55555,server,nowait \
         -netdev user,id=network0 \
         -device e1000,netdev=network0,mac=52:54:00:12:34:56 \
@@ -64,14 +64,13 @@ run-bios:
 [group('run')]
 run-grub-uefi:
     -rm -r {{grub_root}}
-    mkdir -p {{grub_root}}/efi/boot {{grub_root}}/EFI/ubuntu
-    cp ./samples/grub/grubx64.efi {{grub_root}}/efi/boot/bootx64.efi
+    mkdir -p {{grub_root}}/EFI/boot {{grub_root}}/EFI/ubuntu
+    cp ./samples/grub/grubx64.efi {{grub_root}}/EFI/boot/bootx64.efi
     cp {{patched_kernel}} {{grub_root}}/kernel.bzimage
     cp {{config_dir}}/grub-uefi.cfg {{grub_root}}/EFI/ubuntu/grub.cfg
+    cp /usr/share/OVMF/OVMF_VARS_4M.fd `pwd`/tmp/OVMF_VARS_4M.fd
 
     qemu-system-x86_64 \
-        -hda fat:rw:samples/grub-root \
-        -hdb {{rootfs}} \
         -accel kvm \
         -m 4G \
         -nographic \
@@ -79,8 +78,10 @@ run-grub-uefi:
         -monitor tcp:127.0.0.1:55555,server,nowait \
         -netdev user,id=network0 \
         -device e1000,netdev=network0,mac=52:54:00:12:34:56 \
-        -smbios type=0,uefi=on \
-        -bios {{ovmffw}} \
+        -drive file=fat:rw:samples/grub-root,if=ide,index=0 \
+        -drive file={{rootfs}},format=raw,if=virtio \
+        -drive if=pflash,format=raw,readonly=on,file=/usr/share/OVMF/OVMF_CODE_4M.fd \
+        -drive if=pflash,format=raw,file=`pwd`/tmp/OVMF_VARS_4M.fd \
         {{extra_qemu}}
 
 # Run the kernel via a BIOS grub rescue imagea
@@ -99,7 +100,6 @@ run-grub-bios:
         -m 4G \
         -nographic \
         -gdb tcp::1234 \
-        -S \
         -monitor tcp:127.0.0.1:55555,server,nowait \
         -netdev user,id=network0 \
         -device e1000,netdev=network0,mac=52:54:00:12:34:56 \
@@ -119,6 +119,7 @@ patch-kernel kernel=env("SOURCE_KERNEL") payload=env("PAYLOAD", "") output=patch
 # Download OpenWRTs rootfs
 [group('setup')]
 get-rootfs:
+    mkdir -p samples/rootfs/
     wget -O samples/rootfs/openwrt-rootfs.img.gz \
         https://downloads.openwrt.org/releases/23.05.4/targets/x86/64/openwrt-23.05.4-x86-64-generic-ext4-rootfs.img.gz
     cd samples/rootfs/ && gunzip openwrt-rootfs.img.gz
@@ -127,7 +128,7 @@ get-rootfs:
 [group('setup')]
 get-grub-uefi:
     mkdir -p samples/grub/
-    wget -O samples/grub/grub-ubuntu.deb https://launchpad.net/ubuntu/+archive/primary/+files/grub-efi-amd64-unsigned_2.12-5ubuntu4_amd64.deb
+    wget -O samples/grub/grub-ubuntu.deb http://launchpadlibrarian.net/817183946/grub-efi-amd64-unsigned_2.14~git20250718.0e36779-1ubuntu4_amd64.deb
     cd ./samples/grub/ && \
         ar x ./grub-ubuntu.deb && \
         tar -xf ./data.tar.xz && \

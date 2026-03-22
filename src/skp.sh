@@ -10,13 +10,15 @@ source .venv/bin/activate
 
 # extract kallsyms
 if [ ! -f $INTERMEDIATE/kallsyms ]; then
-    kallsyms-finder $SOURCE_KERNEL > $INTERMEDIATE/kallsyms
+    uv run --project tools/vmlinux-to-elf kallsyms-finder $SOURCE_KERNEL > $INTERMEDIATE/kallsyms
 fi
 
 # extract the kernel so we can find an offset to copy out payload to in the
 # kernel image.
 if [ ! -f $INTERMEDIATE/curr.elf ]; then
-    ./tools/extract-vmlinux $SOURCE_KERNEL > $INTERMEDIATE/curr.elf
+    uv tool run tools/vmlinux-to-elf \
+        $SOURCE_KERNEL \
+        $INTERMEDIATE/curr.elf
 fi
 
 # compile the runtime.

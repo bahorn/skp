@@ -16,3 +16,5 @@ priv
 *.bzimage
 *.img
 kernels.lst
+/tools/vmlinux-to-elf
+/tmp
