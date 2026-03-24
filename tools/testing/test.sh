@@ -8,4 +8,4 @@ just extra_qemu="" run-$TYPE > $FNAME
 EOF
 
 # Need to checkout the log for several messages
-python3 ./src/scripts/verify.py $FNAME
+python3 ./tools/testing/verify.py $FNAME
