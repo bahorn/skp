@@ -30,5 +30,5 @@ just extra_qemu="" run-$TYPE > /tmp/log.txt
 EOF
 
 # Need to checkout the log for several messages
-python3 ./src/scripts/verify.py --bisect --invert /tmp/log.txt
+python3 ./tools/testing/verify.py --bisect --invert /tmp/log.txt
 exit $?

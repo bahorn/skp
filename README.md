@@ -123,10 +123,10 @@ the patch you can use the `just test-batch` command.
 
 Create a file containing the paths to each kernel you want to test, then run
 `just test-batch kernels.lst payload.bin` and it will use
-`./src/scripts/verify.py` to tell you which kernels failed to boot.
+`./tools/testing/verify.py` to tell you which kernels failed to boot.
 
 A timeout of 30 seconds is used for each kernel, which might not be enough.
-You can change it in `./src/test-batch.sh`.
+You can change it in `./tools/testing/test-batch.sh`.
 
 An example list of kernels looks like:
 ```
@@ -143,7 +143,7 @@ broke things.
 
 First, setup a script (`wrapper.sh`) in the directory of the kernel:
 ```
-cd PATH_TO_SKP && ./src/scripts/bisect.sh $1 uefi
+cd PATH_TO_SKP && ./tools/testing/bisect.sh $1 uefi
 ```
 
 Then you can do a bisect like so:
@@ -160,7 +160,7 @@ Which should find the commit that introduced / fixed the issue in a hour or two.
 The bisect.sh script does assume old is the one that causes the issue, and new
 is the one where it is fixed.
 You can change this behaviour by removing the `--invert` in
-`./src/scripts/bisect.sh`
+`./tools/testing/bisect.sh`
 
 ## Techniques
 

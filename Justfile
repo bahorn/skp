@@ -153,7 +153,7 @@ clean:
 [group('testing')]
 test-batch test_kernel_list payload=env("PAYLOAD"):
     cat {{test_kernel_list}} | \
-        xargs -I HERE ./src/scripts/test-batch.sh HERE {{payload}}
+        xargs -I HERE ./tools/testing/test-batch.sh HERE {{payload}}
 
 # Connect to the GDB server
 [group('run')]
