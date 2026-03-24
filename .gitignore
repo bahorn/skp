@@ -18,4 +18,5 @@ priv
 kernels.lst
 /tools/vmlinux-to-elf
 /tools/easylkb
+/tools/klude2
 /tmp
