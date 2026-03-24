@@ -24,6 +24,9 @@ size_t get_n_pages(size_t n);
 bool do_relocs(void *elf);
 int strcmp(const char *s1, const char *s2);
 
+__attribute__((weak)) unsigned char payload[0];
+__attribute__((weak, section(".data"))) unsigned int payload_len = 0;
+
 /* Basic stolen strcmp implementation:
  * https://stackoverflow.com/questions/34873209/implementation-of-strcmp
  */
@@ -245,10 +248,6 @@ void run_elf(void *elf, size_t len)
     run_tha_fun(start);
 }
 
-#ifdef PAYLOAD
-#include "../../payload.h"
-#endif
-
 /* Takes just the address of the _text section */
 __attribute__ ((section(".text.start")))
 void _start(unsigned long text, int via_initcall, unsigned long kallsyms_offset)
@@ -282,11 +281,12 @@ void _start(unsigned long text, int via_initcall, unsigned long kallsyms_offset)
         _printk("Called via UEFI Runtime hook\n");
     }
 
-#ifdef PAYLOAD
-    _printk("Running payload\n");
-    run_elf(payload, payload_len);
-#else
-    _printk("No payload defined\n");
-#endif
+    _printk("payload_len: %i\n", payload_len);
+    if (payload_len > 0) {
+        _printk("Running payload\n");
+        run_elf(payload, payload_len);
+    } else {
+        _printk("No payload defined\n");
+    }
     return;
 }
