@@ -1,11 +1,6 @@
 
 build:
-ifdef PAYLOAD
-	../../tools/xxd.py $(PAYLOAD) payload > ./payload.h
-	SYMBOLS=$(SYMBOLS) PAYLOAD=-DPAYLOAD make -C kshelf-loader
-else
-	SYMBOLS=$(SYMBOLS) make -C kshelf-loader
-endif
+	SYMBOLS=$(SYMBOLS) PAYLOAD=$(PAYLOAD) make -C kshelf-loader
 	SYMBOLS=$(SYMBOLS) LOAD_OFFSET=$(LOAD_OFFSET) make -C ./stage2
 	SYMBOLS=$(SYMBOLS) LOAD_OFFSET=$(LOAD_OFFSET) \
 			make -C ./stage1-uefi-bootservices-hook
