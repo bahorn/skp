@@ -1,4 +1,7 @@
     BITS 32
+
+section .code32_hook
+
 _code32_hook:
     cld
     cli

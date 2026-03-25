@@ -1,4 +1,5 @@
 ; Our goal here is to hook exit_boot_services, then continue boot as normal.
+section .uefi_hook
 _uefi_entry:
     push rax
     push rcx

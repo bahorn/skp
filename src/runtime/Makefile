@@ -5,7 +5,7 @@ build:
 	SYMBOLS=$(SYMBOLS) LOAD_OFFSET=$(LOAD_OFFSET) \
 			make -C ./stage1-uefi-bootservices-hook
 	make -C ./stage0/
-	cp ./stage0/stage0.bin ./all.bin
+	ld -T./linker.lds ./stage0/stage0.o -o all.bin
 	python3 fill_in.py ./all.bin
 
 
