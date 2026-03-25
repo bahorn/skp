@@ -1,5 +1,6 @@
 BITS 64
 
+section .header
 
 ; This is a custom linking format just to make it easier to patch values in this
 ; directly.
@@ -57,5 +58,7 @@ _badlink_end:
 %include "./uefi.asm"
 %include "./code32.asm"
 
+
+section .hook
 _our_hook:
     incbin "../stage1-uefi-bootservices-hook/bootservices_hook.bin"
