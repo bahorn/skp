@@ -1,11 +1,10 @@
 
 build:
-	SYMBOLS=$(SYMBOLS) PAYLOAD=$(PAYLOAD) make -C kshelf-loader
+	PAYLOAD=$(PAYLOAD) make -C kshelf-loader
 	SYMBOLS=$(SYMBOLS) LOAD_OFFSET=$(LOAD_OFFSET) make -C ./stage2
 	SYMBOLS=$(SYMBOLS) LOAD_OFFSET=$(LOAD_OFFSET) \
 			make -C ./stage1-uefi-bootservices-hook
-	SYMBOLS=$(SYMBOLS) LOAD_OFFSET=$(LOAD_OFFSET) \
-			make -C ./stage0/
+	make -C ./stage0/
 	cp ./stage0/stage0.bin ./all.bin
 	python3 fill_in.py ./all.bin
 
