@@ -51,9 +51,6 @@ CFLAGS=-O0 \
 	   -fno-omit-frame-pointer \
 	   -fno-optimize-sibling-calls \
 	   -fno-stack-clash-protection \
-	   -mrecord-mcount \
-	   -mfentry \
-	   -DCC_USING_FENTRY \
 	   -Wdeclaration-after-statement \
 	   -Wvla \
 	   -Wno-pointer-sign \
