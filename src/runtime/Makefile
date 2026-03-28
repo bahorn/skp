@@ -11,8 +11,6 @@ build:
 		./stage1-uefi-bootservices-hook/stage1.o \
 		./stage2/stage2.o \
 		-o all.bin
-	python3 fill_in.py ./all.bin
-
 
 clean:
 	-rm all.bin payload.h output.map

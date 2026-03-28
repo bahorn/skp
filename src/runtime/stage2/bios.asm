@@ -1,12 +1,8 @@
 BITS 64
 
-; marker to find the bios entry
-    dd 0x41424344
-    db "hack the planet", 0
-    dd 0x61626364
-
 ; this is the code we call just after the kernel is decompressed if we boot via
 ; BIOS.
+global _bios_entry
 _bios_entry:
     push rax
     push rcx
