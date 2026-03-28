@@ -1,12 +1,14 @@
 ; Our goal here is to hook exit_boot_services, then continue boot as normal.
 section .uefi_hook
+
+extern _stage1_main
 _uefi_entry:
     push rax
     push rcx
     push rdx
     push r8
     push r9
-    call _our_hook
+    call _stage1_main
     pop r9
     pop r8
     pop rdx

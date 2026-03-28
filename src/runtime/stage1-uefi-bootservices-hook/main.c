@@ -7,7 +7,7 @@
 #include "../stage2/export.h"
 
 
-void _start(EFI_HANDLE ImageHandle, EFI_SYSTEM_TABLE *SystemTable);
+void _stage1_main(EFI_HANDLE ImageHandle, EFI_SYSTEM_TABLE *SystemTable);
 
 // Want it pre-initialized
 EFI_EXIT_BOOT_SERVICES orig_exitbootservices = (EFI_EXIT_BOOT_SERVICES) 0x41424344;
@@ -176,15 +176,16 @@ EFI_STATUS exit_bootservices_hook(EFI_HANDLE ImageHandle, UINTN MapKey)
 
 done:
     EFI_STATUS ret = orig_exitbootservices(ImageHandle, MapKey);
+
     return ret;
 }
 
 
 __attribute__ ((section(".text.start")))
-void _start(EFI_HANDLE ImageHandle, EFI_SYSTEM_TABLE *SystemTable)
+void _stage1_main(EFI_HANDLE ImageHandle, EFI_SYSTEM_TABLE *SystemTable)
 {
     /* Gotta do relocation */
-    runtime_bin = (char *)((unsigned long)&_start + (unsigned long)runtime_bin);
+    runtime_bin = ((unsigned long)&runtime_bin + runtime_bin);
 
     bootservices = SystemTable->BootServices;
     systable = SystemTable;

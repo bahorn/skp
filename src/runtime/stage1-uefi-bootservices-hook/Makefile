@@ -9,9 +9,8 @@ build:
 		$(EXTRA_STAGE2_DEFINE) \
 		$(CFLAGS) \
 		-c main.c -o main.o
-	$(LD) -r -o merged.o ./main.o ../stage2/stage2.o
-	$(LD) $(LDFLAGS) ./merged.o -o bootservices_hook.bin
+	objcopy --prefix-sections=.stage1 main.o stage1.o
 
 
 clean:
-	-rm main.o merged.o bootservices_hook.bin
+	-rm main.o stage1.o
