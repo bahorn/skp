@@ -2,6 +2,8 @@ BITS 64
 
 section .header
 
+extern _bios_entry
+
 ; This is a custom linking format just to make it easier to patch values in this
 ; directly.
 _bad_link_header:
@@ -20,7 +22,7 @@ _bad_link_reloc_start:
 ; adjusted later on.
     db "bios_e", 0
     db 0x20 ; offset type for reading.
-    dq 0
+    dq _bios_entry - _badlink_end
 
 ; original uefi entrypoint
     db "uefi_o", 0
