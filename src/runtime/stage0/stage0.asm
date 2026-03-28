@@ -57,8 +57,3 @@ _badlink_end:
 
 %include "./uefi.asm"
 %include "./code32.asm"
-
-
-section .hook
-_our_hook:
-    incbin "../stage1-uefi-bootservices-hook/bootservices_hook.bin"
