@@ -15,12 +15,21 @@ INITCALL = re.compile('__initcall__kmod_core[_0-9a-z]*regulator_init_complete[_0
 WANT = 0x00_01_00_00
 
 
-def test(data, start, end):
-    for i in range(start, end):
-        if data[i] != 0xcc:
-            return False
-
-    return True
+def find_blocks(data, min_size=WANT):
+    blocks = []
+    i = len(data) - 1
+    while i >= 0:
+        if data[i] == 0xcc:
+            end = i
+            while i >= 0 and data[i] == 0xcc:
+                i -= 1
+            start = i + 1
+            size = end - start + 1
+            if size >= min_size:
+                blocks.append((start, size))
+        else:
+            i -= 1
+    return blocks
 
 
 def find_space(path):
@@ -31,23 +40,17 @@ def find_space(path):
 
     f = ELFFile(fp)
 
-    rodata = f.get_section_by_name('.rodata').header['sh_offset']
-    text = f.get_section_by_name('.text').header['sh_offset']
+    text = f.get_section_by_name('.text')
+    start = text.header['sh_offset']
+    end = start + text.header['sh_size']
 
-    spot = rodata - text
-    start = spot - WANT
-    end = spot
+    # now search from the end of .text for a large enough block of 0xcc
 
-    if test(data, start, end):
-        return start
+    blocks = find_blocks(data[start:end])
+    if len(blocks) == 0:
+        raise Exception('FAILURE')
 
-    start = rodata - WANT
-    end = rodata
-
-    if test(data, start, end):
-        return start
-
-    raise Exception('FAILURE')
+    return start + blocks[0][0]
 
 
 def kallsyms_line_to_int(line):
