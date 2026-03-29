@@ -2,6 +2,7 @@ BITS 64
 
 extern kallsyms_lookup_name
 extern __efi_call
+extern __preempt_count
 
 ; The original GetVariable()
 _original:

@@ -14,6 +14,8 @@ INITCALL = re.compile('__initcall__kmod_core[_0-9a-z]*regulator_init_complete[_0
 # May need adjusting, worked on a 5.15 kernel.
 WANT = 0x00_01_00_00
 
+PCPU_OFFSET = 8
+
 
 def find_blocks(data, min_size=WANT):
     blocks = []
@@ -58,6 +60,21 @@ def kallsyms_line_to_int(line):
     return int(f'0x{v}', 16)
 
 
+def preempt_count(path):
+    for line in open(sys.argv[1], 'r'):
+        l = line.strip()
+        s = l.split(' ')[-1]
+        value = l.split(' ')[0]
+        if s == '__preempt_count':
+            # old kernel, we got the offset
+            return kallsyms_line_to_int(line)
+
+        if s == 'pcpu_hot':
+            return kallsyms_line_to_int(line) + PCPU_OFFSET
+
+    raise Exception('finding preempt count failed')
+
+
 def find_symbols(path, symbols):
     text = None
     sym_addr = {symbol: None for symbol in symbols}
@@ -97,6 +114,7 @@ def main():
     for k, v in find_symbols(sys.argv[1], SYMBOLS).items():
         print(f'HIDDEN({k} = {hex(v)});')
     print(f'HIDDEN(load_offset = {hex(find_space(sys.argv[2]))});')
+    print(f'HIDDEN(__preempt_count = {hex(preempt_count(sys.argv[1]))});')
 
 if __name__ == "__main__":
     main()
