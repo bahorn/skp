@@ -2,6 +2,8 @@
 section .uefi_hook
 
 extern _stage1_main
+
+global _uefi_entry
 _uefi_entry:
     push rax
     push rcx

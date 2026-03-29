@@ -31,15 +31,11 @@ SECTIONS
     }
 
     .stage1.data : ALIGN(16) {
-        _DATA_START_ = .;
         *(.stage1.data)
-        _DATA_END_ = .;
     }
 
     .stage1.bss : ALIGN(16) {
-        _BSS_START_ = .;
         *(.stage1.bss)
-        _BSS_END_ = .;
     }
 
     . = . + 64;
@@ -49,5 +45,9 @@ SECTIONS
         *(.stage2.*)
     }
 
-    /DISCARD/ : { *(.note*) }
+    /DISCARD/ : {
+        *(*.note*)
+        *(.note*)
+        *(*.comment*)
+    }
 }
