@@ -21,3 +21,4 @@ kernels.lst
 /tools/klude2
 /tmp
 output.map
+generated.lds

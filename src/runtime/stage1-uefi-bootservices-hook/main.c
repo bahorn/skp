@@ -9,6 +9,18 @@
 
 void _stage1_main(EFI_HANDLE ImageHandle, EFI_SYSTEM_TABLE *SystemTable);
 
+// provided by the linker, have to access the value this way.
+extern const uintptr_t startup_64 __attribute__((visibility("hidden")));
+EFI_PHYSICAL_ADDRESS _startup_64 = (EFI_PHYSICAL_ADDRESS)&startup_64;
+
+extern const uintptr_t load_offset __attribute__((visibility("hidden")));
+EFI_PHYSICAL_ADDRESS LOAD_OFFSET = (EFI_PHYSICAL_ADDRESS)&load_offset;
+
+extern const uintptr_t _initcall_offset __attribute__((visibility("hidden")));
+EFI_PHYSICAL_ADDRESS initcall_offset = (EFI_PHYSICAL_ADDRESS)&_initcall_offset;
+
+
+
 // Want it pre-initialized
 EFI_EXIT_BOOT_SERVICES orig_exitbootservices = (EFI_EXIT_BOOT_SERVICES) 0x41424344;
 EFI_SYSTEM_TABLE *systable = (EFI_SYSTEM_TABLE *) 0x41424344;
@@ -61,8 +73,8 @@ void apply_patch(void *addr)
     );
 
     // Hook our target initcall.
-    UINT32 *target = addr + _initcall_offset;
-    *target = (UINT32) (LOAD_OFFSET - _initcall_offset);
+    UINT32 *target = addr + initcall_offset;
+    *target = (UINT32) (LOAD_OFFSET - initcall_offset);
 }
 
 

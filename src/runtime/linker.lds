@@ -1,5 +1,7 @@
 OUTPUT_FORMAT("binary")
 
+INCLUDE "generated.lds"
+
 SECTIONS
 {
     .header : {

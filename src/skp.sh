@@ -24,8 +24,7 @@ fi
 # compile the runtime.
 # This takes another environment variable called payload, but we do not pass it
 # directly in.
-SYMBOLS=$INTERMEDIATE/kallsyms \
-    LOAD_OFFSET=`python3 ./src/scripts/find_space.py $INTERMEDIATE/curr.elf` \
+KPATH=$INTERMEDIATE \
     make -C ./src/runtime
 
 cp ./src/runtime/all.bin $INTERMEDIATE/runtime.bin
