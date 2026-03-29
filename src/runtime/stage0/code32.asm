@@ -2,6 +2,8 @@
 
 section .code32_hook
 
+
+global _code32_hook
 _code32_hook:
     cld
     cli
@@ -34,6 +36,7 @@ _offset_dest:
     push 0x100_000
     ret
 
+global _to_copy
 _to_copy:
 ; code to call _bios_entry, our code to patch the kernel in the BIOS boot path.
     db 0x68
