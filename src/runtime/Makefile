@@ -1,10 +1,11 @@
 
 build:
 	PAYLOAD=$(PAYLOAD) make -C kshelf-loader
-	SYMBOLS=$(SYMBOLS) LOAD_OFFSET=$(LOAD_OFFSET) make -C ./stage2
-	SYMBOLS=$(SYMBOLS) LOAD_OFFSET=$(LOAD_OFFSET) \
+	SYMBOLS=$(KPATH)/kallsyms make -C ./stage2
+	SYMBOLS=$(KPATH)/kallsyms \
 			make -C ./stage1-uefi-bootservices-hook
 	make -C ./stage0/
+	python3 ../scripts/generate_lds.py $(KPATH)/kallsyms $(KPATH)/curr.elf > generated.lds
 	ld -T./linker.lds \
 		 -Map=output.map \
 		./stage0/stage0.o \
@@ -13,7 +14,7 @@ build:
 		-o all.bin
 
 clean:
-	-rm all.bin payload.h output.map
+	-rm all.bin payload.h output.map generated.lds
 	make -C ./stage0/ clean
 	make -C ./kshelf-loader/ clean
 	make -C ./stage2 clean

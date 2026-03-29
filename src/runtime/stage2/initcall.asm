@@ -1,9 +1,15 @@
+extern startup_64
+extern kallsyms_lookup_name
+extern load_offset
+
 ; This is the code that will be copied into a cavity into the kernel image.
 ; So if get here we got patched into the kernel and called via an initcall.
 _initcall_runtime_thunk:
 ; Want to pass in our known address of _text
 ; In this case, it's RIP relative back.
-    lea rdi, [rel $-_stage1_offset-_startup_64_offset]
+    lea rdi, [rel $]
+    sub rdi, load_offset
+    sub rdi, startup_64
     mov rsi, 1
-    mov rdx, _kallsyms_offset
+    mov rdx, kallsyms_lookup_name
     jmp _kshelf_loader

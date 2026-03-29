@@ -1,5 +1,8 @@
 BITS 64
 
+extern kallsyms_lookup_name
+extern __efi_call
+
 ; The original GetVariable()
 _original:
     dq 0
@@ -27,7 +30,7 @@ _uefi_entry:
 
     mov rdi, rax
     mov rsi, 0
-    mov rdx, _kallsyms_offset
+    mov rdx, kallsyms_lookup_name
     inc dword gs:__preempt_count
     call _kshelf_loader
     dec dword gs:__preempt_count
