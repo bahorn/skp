@@ -73,17 +73,14 @@ CFLAGS=-O0 \
 	   -fsanitize=bool \
 	   -fsanitize=enum
 ASFLAGS=--64
-LDFLAGS=-T ./linker.lds -pie
-
 CC=gcc
-LD=ld
 
 
 build:
 	$(CC) \
 		$(CFLAGS) \
-		-c ./src/entry.c -o kshelf_loader.o
-	$(LD) $(LDFLAGS) ./kshelf_loader.o $(PAYLOAD) -o kshelf_loader.bin
+		-c ./entry.c -o kshelf_loader.o
+	objcopy --prefix-sections=.kshelf_loader --localize-symbol=memcpy kshelf_loader.o
 
 clean:
 	-rm kshelf_loader.o kshelf_loader.bin

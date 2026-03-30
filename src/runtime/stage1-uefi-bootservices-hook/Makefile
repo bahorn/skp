@@ -6,7 +6,8 @@ build:
 		$(EXTRA_STAGE2_DEFINE) \
 		$(CFLAGS) \
 		-c main.c -o main.o
-	objcopy --prefix-sections=.stage1 main.o stage1.o
+	objcopy --prefix-sections=.stage1 --localize-symbol=memcpy main.o stage1.o
+
 
 
 clean:

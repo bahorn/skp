@@ -250,7 +250,7 @@ void run_elf(void *elf, size_t len)
 
 /* Takes just the address of the _text section */
 __attribute__ ((section(".text.start")))
-void _start(unsigned long text, int via_initcall, unsigned long kallsyms_offset)
+void _kshelf_loader(unsigned long text, int via_initcall, unsigned long kallsyms_offset)
 {
     kallsyms_lookup_name = (kallsyms_lookup_name_t) ((void *)text + kallsyms_offset);
     _printk = (_printk_t) kallsyms_lookup_name("_printk");
