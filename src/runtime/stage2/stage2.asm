@@ -1,5 +1,8 @@
 BITS 64
 
+extern _kshelf_loader
+extern _kshelf_loader_end
+
 %define _kshelf_loader_len _kshelf_loader_end - _kshelf_loader
 
 _begin:
@@ -12,11 +15,6 @@ _start_stage2:
 
 %include "initcall.asm"
 
-; We just append this.
-_kshelf_loader:
-    incbin "../kshelf-loader/kshelf_loader.bin"
-_kshelf_loader_end:
-
 global runtime_bin:data 8
 runtime_bin:
     dq _start_stage2 - runtime_bin
@@ -27,4 +25,4 @@ runtime_bin_offset:
 
 global runtime_bin_len:data 4
 runtime_bin_len:
-    dd runtime_bin_offset - _begin
+    dd _kshelf_loader_end - _begin
