@@ -1,6 +1,5 @@
 BITS 64
 
-extern kallsyms_lookup_name
 extern __efi_call
 extern __preempt_count
 
@@ -31,7 +30,6 @@ _uefi_entry:
 
     mov rdi, rax
     mov rsi, 0
-    mov rdx, kallsyms_lookup_name
     inc dword gs:__preempt_count
     call _kshelf_loader
     dec dword gs:__preempt_count

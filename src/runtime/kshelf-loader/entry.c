@@ -13,7 +13,9 @@ typedef int *(*set_memory_ro_t)(unsigned long addr, int numpages);
 typedef int (*regulator_init_complete_t)(void);
 
 
-kallsyms_lookup_name_t kallsyms_lookup_name;
+extern const uintptr_t kallsyms_lookup_name __attribute__((visibility("hidden")));
+kallsyms_lookup_name_t kallsyms_lookup_name_ = (kallsyms_lookup_name_t) &kallsyms_lookup_name;
+
 _printk_t _printk;
 vmalloc_t vmalloc;
 set_memory_x_t set_memory_x;
@@ -134,7 +136,7 @@ dt_end:
                 sym_idx = ELF64_R_SYM(rela[i].r_info);
                 symname = strtab + symtab[sym_idx].st_name;
 #ifdef __KERNEL__
-                sym_addr = kallsyms_lookup_name(symname);
+                sym_addr = kallsyms_lookup_name_(symname);
 #endif
                 _printk("relocating sym: %s\n", symname);
                 to_patch = \
@@ -152,7 +154,7 @@ dt_end:
                 sym_idx = ELF64_R_SYM(rela[i].r_info);
                 symname = strtab + symtab[sym_idx].st_name;
 #ifdef __KERNEL__
-                sym_addr = kallsyms_lookup_name(symname);
+                sym_addr = kallsyms_lookup_name_(symname);
 #endif
                 _printk(
                     "copy sym: %s (%lli bytes)\n",
@@ -250,20 +252,23 @@ void run_elf(void *elf, size_t len)
 
 /* Takes just the address of the _text section */
 __attribute__ ((section(".text.start")))
-void _kshelf_loader(unsigned long text, int via_initcall, unsigned long kallsyms_offset)
+void _kshelf_loader(unsigned long text, int via_initcall)
 {
-    kallsyms_lookup_name = (kallsyms_lookup_name_t) ((void *)text + kallsyms_offset);
-    _printk = (_printk_t) kallsyms_lookup_name("_printk");
-    vmalloc = (vmalloc_t) kallsyms_lookup_name("vmalloc");
+    // have to relocate it
+    kallsyms_lookup_name_ = \
+        (kallsyms_lookup_name_t) (text + (void *)kallsyms_lookup_name_);
+    _printk = (_printk_t) kallsyms_lookup_name_("_printk");
+    vmalloc = (vmalloc_t) kallsyms_lookup_name_("vmalloc");
 
     /* vmalloc became a macro in 6.10, so working around that. */
     if (vmalloc == NULL) {
         // skips any alloc hooks.
-        vmalloc = (vmalloc_t) kallsyms_lookup_name("vmalloc_noprof");
+        vmalloc = (vmalloc_t) kallsyms_lookup_name_("vmalloc_noprof");
     }
 
-    set_memory_ro = (set_memory_ro_t) kallsyms_lookup_name("set_memory_ro");
-    set_memory_x = (set_memory_x_t) kallsyms_lookup_name("set_memory_x");
+    set_memory_ro = (set_memory_ro_t) kallsyms_lookup_name_("set_memory_ro");
+    set_memory_x = (set_memory_x_t) kallsyms_lookup_name_("set_memory_x");
+
 
     if (vmalloc == NULL || set_memory_ro == NULL || set_memory_x == NULL) {
         _printk("Can't get Symbol?\n");
@@ -275,7 +280,7 @@ void _kshelf_loader(unsigned long text, int via_initcall, unsigned long kallsyms
     if (via_initcall) {
         _printk("Called via initcall\n");
         regulator_init_complete = 
-            (regulator_init_complete_t) kallsyms_lookup_name("regulator_init_complete");
+            (regulator_init_complete_t) kallsyms_lookup_name_("regulator_init_complete");
         regulator_init_complete();
     } else {
         _printk("Called via UEFI Runtime hook\n");
