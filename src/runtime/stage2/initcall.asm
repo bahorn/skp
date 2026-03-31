@@ -1,4 +1,3 @@
-extern startup_64
 extern load_offset
 
 ; This is the code that will be copied into a cavity into the kernel image.
@@ -8,6 +7,5 @@ _initcall_runtime_thunk:
 ; In this case, it's RIP relative back.
     lea rdi, [rel $]
     sub rdi, load_offset
-    sub rdi, startup_64
     mov rsi, 1
     jmp _kshelf_loader
