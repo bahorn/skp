@@ -48,6 +48,7 @@ SECTIONS
         *(.kshelf_loader.rodata)
         *(.kshelf_loader.data)
         *(.kshelf_loader.bss)
+        *(.kshelf_loader.data.rel.local)
     }
 
     # now the payload, stored in the .data section but including these for the
