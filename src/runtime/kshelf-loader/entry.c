@@ -29,6 +29,10 @@ int strcmp(const char *s1, const char *s2);
 __attribute__((weak)) unsigned char payload[0];
 __attribute__((weak, section(".data"))) unsigned int payload_len = 0;
 
+
+// #define PRINTK(...) ((void)0)
+#define PRINTK(...) _printk(__VA_ARGS__)
+
 /* Basic stolen strcmp implementation:
  * https://stackoverflow.com/questions/34873209/implementation-of-strcmp
  */
@@ -135,16 +139,14 @@ dt_end:
                 /* symtab idx */
                 sym_idx = ELF64_R_SYM(rela[i].r_info);
                 symname = strtab + symtab[sym_idx].st_name;
-#ifdef __KERNEL__
                 sym_addr = kallsyms_lookup_name_(symname);
-#endif
-                _printk("relocating sym: %s\n", symname);
+                PRINTK("relocating sym: %s\n", symname);
                 to_patch = \
                     (unsigned long *)(elf + rela[i].r_offset);
                 *to_patch = sym_addr + rela[i].r_addend;
                 break;
             case R_X86_64_RELATIVE:
-                _printk("relative relocation: %lli\n", rela[i].r_addend);
+                PRINTK("relative relocation: %lli\n", rela[i].r_addend);
                 to_patch = \
                     (unsigned long *)(elf + rela[i].r_offset);
                 *to_patch = (unsigned long)elf + rela[i].r_addend;
@@ -153,10 +155,8 @@ dt_end:
                 /* symtab idx */
                 sym_idx = ELF64_R_SYM(rela[i].r_info);
                 symname = strtab + symtab[sym_idx].st_name;
-#ifdef __KERNEL__
                 sym_addr = kallsyms_lookup_name_(symname);
-#endif
-                _printk(
+                PRINTK(
                     "copy sym: %s (%lli bytes)\n",
                     symname, symtab[sym_idx].st_size
                 );
@@ -169,7 +169,7 @@ dt_end:
                 );
                 break;
             default:
-                _printk("unknown relocation?\n");
+                PRINTK("unknown relocation?\n");
                 return false;
         }
     }
@@ -226,25 +226,25 @@ void run_elf(void *elf, size_t len)
         switch (phdr->p_flags & (PF_R | PF_W | PF_X)) {
             case PF_R | PF_W:
                 /* Default case, nothing needs to be done */
-                _printk("RW\n");
+                PRINTK("RW\n");
                 break;
 
             case PF_R | PF_X:
-                _printk("RX\n");
+                PRINTK("RX\n");
                 /* Set RO, then make it executable */
                 set_memory_ro((uint64_t) body + phdr->p_vaddr, size);
                 set_memory_x((uint64_t) body + phdr->p_vaddr, size);
                 break;
 
             default:
-                _printk("Unsupported page permission\n");
+                PRINTK("Unsupported page permission\n");
                 return;
         }
     }
 
 
     /* Transfer control */
-    _printk("Entrypoint: %lx\n", body + ehdr->e_entry);
+    PRINTK("Entrypoint: %lx\n", body + ehdr->e_entry);
     start = (start_t)(body + ehdr->e_entry);
 
     run_tha_fun(start);
@@ -260,6 +260,8 @@ void _kshelf_loader(unsigned long text, int via_initcall)
     _printk = (_printk_t) kallsyms_lookup_name_("_printk");
     vmalloc = (vmalloc_t) kallsyms_lookup_name_("vmalloc");
 
+    PRINTK("PATCHED KERNEL\n");
+
     /* vmalloc became a macro in 6.10, so working around that. */
     if (vmalloc == NULL) {
         // skips any alloc hooks.
@@ -269,29 +271,27 @@ void _kshelf_loader(unsigned long text, int via_initcall)
     set_memory_ro = (set_memory_ro_t) kallsyms_lookup_name_("set_memory_ro");
     set_memory_x = (set_memory_x_t) kallsyms_lookup_name_("set_memory_x");
 
-
     if (vmalloc == NULL || set_memory_ro == NULL || set_memory_x == NULL) {
-        _printk("Can't get Symbol?\n");
+        PRINTK("Can't get Symbol?\n");
+        return;
     }
-
-    _printk("PATCHED KERNEL\n");
 
     /* If we are called via a patched initcall, we need to call it back */
     if (via_initcall) {
-        _printk("Called via initcall\n");
+        PRINTK("Called via initcall\n");
         regulator_init_complete = 
             (regulator_init_complete_t) kallsyms_lookup_name_("regulator_init_complete");
         regulator_init_complete();
     } else {
-        _printk("Called via UEFI Runtime hook\n");
+        PRINTK("Called via UEFI Runtime hook\n");
     }
 
-    _printk("payload_len: %i\n", payload_len);
+    PRINTK("payload_len: %i\n", payload_len);
     if (payload_len > 0) {
-        _printk("Running payload\n");
+        PRINTK("Running payload\n");
         run_elf(payload, payload_len);
     } else {
-        _printk("No payload defined\n");
+        PRINTK("No payload defined\n");
     }
     return;
 }
