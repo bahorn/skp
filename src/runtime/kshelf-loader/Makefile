@@ -5,7 +5,6 @@ CFLAGS=-O0 \
 	   -nolibc \
 	   -DCONFIG_X86_X32_ABI \
 	   -DMODULE \
-	   -D__KERNEL__ \
 	   -Wall \
 	   -Wundef \
 	   -Werror=strict-prototypes \
@@ -43,7 +42,7 @@ CFLAGS=-O0 \
 	   -Wno-address-of-packed-member \
 	   -fno-allow-store-data-races \
 	   -Wframe-larger-than=1024 \
-	   -fstack-protector-strong \
+	   -fno-stack-protector \
 	   -Wimplicit-fallthrough=5 \
 	   -Wno-main \
 	   -Wno-unused-but-set-variable \
