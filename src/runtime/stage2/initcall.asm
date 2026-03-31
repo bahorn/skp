@@ -1,5 +1,4 @@
 extern startup_64
-extern kallsyms_lookup_name
 extern load_offset
 
 ; This is the code that will be copied into a cavity into the kernel image.
@@ -11,5 +10,4 @@ _initcall_runtime_thunk:
     sub rdi, load_offset
     sub rdi, startup_64
     mov rsi, 1
-    mov rdx, kallsyms_lookup_name
     jmp _kshelf_loader
