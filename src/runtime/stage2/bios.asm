@@ -2,9 +2,11 @@ BITS 64
 
 extern load_offset
 extern _initcall_offset
+extern startup_64
 
 ; this is the code we call just after the kernel is decompressed if we boot via
 ; BIOS.
+; rax contains the address of the entrypoint, which should be startup_64.
 global _bios_entry
 _bios_entry:
     push rax
@@ -17,6 +19,7 @@ _bios_entry:
 ; so the kernel pads sections with 0xcc, with a 0x20_00_00 alignment, so we
 ; have a ton of free space to place a payload.
     lea rsi, [rel _initcall_runtime_thunk]
+    sub rax, startup_64
     mov rdi, rax
     add rdi, load_offset
     mov rcx, _kshelf_loader_len + (_kshelf_loader - _initcall_runtime_thunk)

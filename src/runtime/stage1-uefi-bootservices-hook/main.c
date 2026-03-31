@@ -10,15 +10,11 @@
 void _stage1_main(EFI_HANDLE ImageHandle, EFI_SYSTEM_TABLE *SystemTable);
 
 // provided by the linker, have to access the value this way.
-extern const uintptr_t startup_64 __attribute__((visibility("hidden")));
-EFI_PHYSICAL_ADDRESS _startup_64 = (EFI_PHYSICAL_ADDRESS)&startup_64;
-
 extern const uintptr_t load_offset __attribute__((visibility("hidden")));
 EFI_PHYSICAL_ADDRESS LOAD_OFFSET = (EFI_PHYSICAL_ADDRESS)&load_offset;
 
 extern const uintptr_t _initcall_offset __attribute__((visibility("hidden")));
 EFI_PHYSICAL_ADDRESS initcall_offset = (EFI_PHYSICAL_ADDRESS)&_initcall_offset;
-
 
 
 // Want it pre-initialized
@@ -122,8 +118,7 @@ int try_direct_patching()
         }
         
         if (check_address((void *)curr->PhysicalStart, curr->NumberOfPages)) {
-            /* + 0x80 as that is startup_64 */
-            apply_patch((void *) curr->PhysicalStart + _startup_64);
+            apply_patch((void *) curr->PhysicalStart);
             res = 1;
             break;
         }

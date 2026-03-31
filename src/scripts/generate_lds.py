@@ -100,13 +100,8 @@ def find_symbols(path, symbols):
         if text is not None and found >= total:
             break
 
-    # edge case, where we need to do this before subtracting .text from
-    # startup_64
-    sym_addr['_initcall_offset'] -= sym_addr['startup_64']
-
     for symbol in sym_addr.keys():
-        if symbol != '_initcall_offset':
-            sym_addr[symbol] -= text
+        sym_addr[symbol] -= text
     return sym_addr
 
 
