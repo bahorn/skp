@@ -13,8 +13,10 @@ typedef int *(*set_memory_ro_t)(unsigned long addr, int numpages);
 typedef int (*regulator_init_complete_t)(void);
 
 
-extern const uintptr_t kallsyms_lookup_name __attribute__((visibility("hidden")));
-kallsyms_lookup_name_t kallsyms_lookup_name_ = (kallsyms_lookup_name_t) &kallsyms_lookup_name;
+extern const uintptr_t kallsyms_lookup_name \
+    __attribute__((visibility("hidden")));
+kallsyms_lookup_name_t kallsyms_lookup_name_ = \
+    (kallsyms_lookup_name_t) &kallsyms_lookup_name;
 
 _printk_t _printk;
 vmalloc_t vmalloc;
@@ -97,7 +99,7 @@ bool do_relocs(void *elf)
         break;
     }
     if (dyn == NULL) return true;
-    
+
     /* Now we iterate through .dynamic looking for strtab, symtab, rela */
     for (int i = 0; i < dynamic_tags; i++) {
         Elf64_Dyn *tag = &dyn[i];
@@ -208,20 +210,20 @@ void run_elf(void *elf, size_t len)
     /* First copy the ELF to a new location */
     memset(body, 0, size);
     memcpy(body, elf, len);
-    
+
     ehdr = (Elf64_Ehdr *) body;
     /* Apply the relocations by searching through the PHDRs for a PT_DYNAMIC */
     if (!do_relocs(body)) {
         return;
     }
-    
+
     /* Go through the program headers to set correct page permissions for each
      * PT_LOAD */
     for (uint16_t curr_ph = 0; curr_ph < ehdr->e_phnum; curr_ph++) {
         phdr = body + ehdr->e_phoff  + curr_ph * ehdr->e_phentsize;
         if (phdr->p_type != PT_LOAD)
             continue;
-        
+
         size = get_n_pages(phdr->p_memsz);
         switch (phdr->p_flags & (PF_R | PF_W | PF_X)) {
             case PF_R | PF_W:
@@ -280,7 +282,8 @@ void _kshelf_loader(unsigned long text, int via_initcall)
     if (via_initcall) {
         PRINTK("Called via initcall\n");
         regulator_init_complete = 
-            (regulator_init_complete_t) kallsyms_lookup_name_("regulator_init_complete");
+            (regulator_init_complete_t) kallsyms_lookup_name_(
+                    "regulator_init_complete");
         regulator_init_complete();
     } else {
         PRINTK("Called via UEFI Runtime hook\n");
