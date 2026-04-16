@@ -18,7 +18,8 @@ EFI_PHYSICAL_ADDRESS initcall_offset = (EFI_PHYSICAL_ADDRESS)&_initcall_offset;
 
 
 // Want it pre-initialized
-EFI_EXIT_BOOT_SERVICES orig_exitbootservices = (EFI_EXIT_BOOT_SERVICES) 0x41424344;
+EFI_EXIT_BOOT_SERVICES orig_exitbootservices = \
+    (EFI_EXIT_BOOT_SERVICES) 0x41424344;
 EFI_SYSTEM_TABLE *systable = (EFI_SYSTEM_TABLE *) 0x41424344;
 EFI_BOOT_SERVICES *bootservices = (EFI_BOOT_SERVICES *) 0x41424344;
 int called = 0;
@@ -83,7 +84,7 @@ int try_direct_patching()
     UINTN mapsize = 0, mapkey, descriptorsize;
     EFI_MEMORY_DESCRIPTOR *map = NULL;
     UINT32 descriptorversion;
-    
+
     bootservices->GetMemoryMap(
         &mapsize,
         map,
@@ -112,11 +113,11 @@ int try_direct_patching()
     for (int i = 0; i < count; i++) {
         EFI_MEMORY_DESCRIPTOR *curr = \
             (EFI_MEMORY_DESCRIPTOR *)((UINT8 *)map + i * descriptorsize);
-        
+
         if (curr->Type != EfiLoaderCode) {
             continue;
         }
-        
+
         if (check_address((void *)curr->PhysicalStart, curr->NumberOfPages)) {
             apply_patch((void *) curr->PhysicalStart);
             res = 1;
