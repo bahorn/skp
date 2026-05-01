@@ -50,6 +50,7 @@ def main():
     # Checksum fixes for sanity
     # need to fix the bzImage checksum. Nothing really checks it, but lets do
     # it for completenes.
+    # Modern kernel images don't seem to do this anymore and just set it to 0!
     last = PECheckSumFix(a).fix()
     with open(args.patched_kernel, 'wb') as f:
         f.write(last)
