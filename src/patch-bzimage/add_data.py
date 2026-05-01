@@ -10,17 +10,37 @@ from bios import bios_patch
 
 
 def get_text_start(pe):
-    text_offset = 0
     text_start = 0
     for section in pe.sections:
         if section.Name != b'.text\x00\x00\x00':
             continue
 
-        text_offset = section.__file_offset__
         text_start = section.PointerToRawData
         break
 
-    return text_offset, text_start
+    return text_start
+
+
+
+def add_section(base_pe):
+    """
+    Create a .patch section in the PE.
+
+    It will be empty and not point to anything.
+    """
+    base = pefile.PE(data=base_pe)
+    base.FILE_HEADER.NumberOfSections += 1
+    last_offset = base.sections[-1].__file_offset__ + 0x28
+
+    pe_data = bytearray(base.write())
+
+    # setting our section to null bytes
+    pe_data[last_offset:last_offset + 0x28] = b'\x00' * 0x28
+
+    # just setting the name to .patch
+    pe_data[last_offset:last_offset + 8] = b'.patch\x00\x00'
+
+    return pe_data
 
 
 def add_data(pe_data_orig, data, apply_bios_patch=True, apply_uefi_patch=True):
@@ -28,103 +48,159 @@ def add_data(pe_data_orig, data, apply_bios_patch=True, apply_uefi_patch=True):
     Add a new section to store our patch in the PE, then append our data, and
     install the patches to transfer control to our payload.
     """
+    # One thing to improve this code is having less conversions in / out of
+    # pefile, which I have to do a lot...
+    text_start = get_text_start(pefile.PE(data=pe_data_orig))
+
     bl = BadLink(data)
-    # We can fetch the real entrypoints like this:
+    # We can fetch the real entrypoints from badlink with this:
     bios_start = bl.get_key(b'bios_e\x00')
-    _code32 = bl.get_key(b'code32\x00')
+    code32 = bl.get_key(b'code32\x00')
 
-    to_add_size = pad_size(bl.size(), PAGE_SIZE)
+    # First, add a section to the PE that we can use later on.
+    new_pe = add_section(pe_data_orig)
 
-    pe = pefile.PE(data=pe_data_orig)
+    # -------------------------------------------------------------------------
+    # Appending our data to the PE
+    # -------------------------------------------------------------------------
 
-    # Make the last sections raw size equal to its virtual size
-    curr_virtual_size = pe.sections[-1].Misc_VirtualSize
-    pe.sections[-1].SizeOfRawData += PAGE_SIZE * 2
-    curr_real_size = pe.sections[-1].SizeOfRawData
+    # What we are adding to the last section to pad it so we don't have .bss
+    # corrupting our code when we boot via the BIOS path.
 
-    assert(curr_real_size <= curr_virtual_size)
+    # we need to look at the size of the whole PE so we don't accidentally make
+    # the file not match FileAlignment (which should be 512, so 4k is fine)
+    initialized_padding = pad_size(len(new_pe), PAGE_SIZE) - len(new_pe)
+    initialized_padding += PAGE_SIZE * 2
+    new_pe += b'\x00' * initialized_padding
 
-    # Need some offsets for patching
-    last_offset = pe.sections[-1].__file_offset__ + 0x28
-    text_offset, text_start = get_text_start(pe)
+    # Offser_raw is the offset in the patched kernel image where we'll be adding
+    # in our code.
+    offset_raw = len(new_pe)
 
-    # Now we update the headers
-    pe.FILE_HEADER.NumberOfSections += 1
-    pe.OPTIONAL_HEADER.SizeOfImage += to_add_size
-    pe.OPTIONAL_HEADER.SizeOfCode = pe.OPTIONAL_HEADER.SizeOfImage
-    old_entrypoint = pe.OPTIONAL_HEADER.AddressOfEntryPoint
-    pe_data = bytearray(pe.write())
+    # Add in space for the the payload, so we can copy it in here later.
+    patch_section_size = pad_size(bl.size(), PAGE_SIZE)
+    new_pe += b'\x00' * patch_section_size
 
-    # Pad the last section with nulls so our code doesn't get trashed.
-    pe_data += b'\x00' * (PAGE_SIZE * 1)
-    to_pad_with = curr_virtual_size - curr_real_size
+    # -------------------------------------------------------------------------
+    # BIOS Patch
+    # -------------------------------------------------------------------------
 
-    # Calculate things before appending our data
-    offset = len(pe_data)
-    uefi_offset = to_pad_with + offset
-
-    # Replacing the UEFI entrypoint
-    pe = pefile.PE(data=pe_data)
-    if apply_uefi_patch:
-        new_entrypoint = uefi_offset + bl.get_key(b'uefi_e\x00')
-        pe.OPTIONAL_HEADER.AddressOfEntryPoint = new_entrypoint
-
-    pe_data = bytearray(pe.write())
-
-    called_from = uefi_offset + bl.get_key_offset(b'uefi_o\x00') + 4
-    orig_entrypoint = old_entrypoint - called_from
-
-    # need to calculate an offset to use to call the old entrypoint
-    bl.set_key(b'uefi_o\x00', struct.pack('<i', orig_entrypoint))
-
-    k = BIOS_TARGET_ADDRESS + offset + bl.get_key(b'o_ptch\x00') - text_start
-    bl.set_key(b'o_tocp\x00', struct.pack('<I', k))
-
-    # need to set the offsets we use patch the bios.
-    b_start, b_dest = bios_patch(pe_data, offset, text_start, bios_start)
-    bl.set_key(b'o_bios\x00', struct.pack('<I', b_dest))
-    bl.set_key(b'o_dest\x00', struct.pack('<I', b_start))
-
-    # Finally, append our data.
-    to_add = pad(bl.get(), PAGE_SIZE)
-    pe_data += to_add
-
-    # Create new section based on .text, with the same permissions.
-    pe_data[last_offset:last_offset + 0x28] = \
-        pe_data[text_offset:text_offset + 0x28]
-
-    # Need to use offsets here to work around library issues.
-
-    # name
-    pe_data[last_offset:last_offset + 8] = b'.patch\x00\x00'
-
-    # virtualSize
-    pe_data[last_offset + 8:last_offset + 8 + 4] = \
-        struct.pack('<I', len(to_add))
-    # rva
-    pe_data[last_offset + 12:last_offset + 12 + 4] = \
-        struct.pack('<I', uefi_offset)
-    # size of raw data
-    pe_data[last_offset + 16:last_offset + 16 + 4] = \
-        struct.pack('<I', len(to_add))
-    # ptr raw data
-    pe_data[last_offset + 20:last_offset + 20 + 4] = \
-        struct.pack('<I', offset)
-
-    # We do not need to do any more for UEFI as we already hooked it's
-    # entrypoint, but need to now deal with BIOS.
-
+    # This is our BIOS patch, which is very easy to apply.
     # Now we want to disable relocation so the kernel is always at its prefered
     # address with various BIOS bootloaders.
-    pe_data[0x234] = 0
+    new_pe[0x234] = 0
     # And fix the prefered address.
-    pe_data[0x258:0x258 + 8] = struct.pack('<Q', BIOS_TARGET_ADDRESS)
+    new_pe[0x258:0x258 + 8] = struct.pack('<Q', BIOS_TARGET_ADDRESS)
 
     # Finally we hook code32_start to run some code that will modify the jmp to
     # the kernel after it is decompressed.
     # If this not applied the kernel will function normally on this bootpath.
     if apply_bios_patch:
-        new_code32 = BIOS_TARGET_ADDRESS + offset + _code32 - text_start
-        pe_data[0x214:0x214 + 4] = struct.pack('<I', new_code32)
+        new_code32 = BIOS_TARGET_ADDRESS + offset_raw + code32 - text_start
+        new_pe[0x214:0x214 + 4] = struct.pack('<I', new_code32)
+
+    # -------------------------------------------------------------------------
+    # Correcting the the patch / data section values
+    # -------------------------------------------------------------------------
+
+    pe = pefile.PE(data=new_pe)
+
+    # We need to adjust the size of the section before our .patch section to
+    # account for the extra initialized data we added to it.
+    # print(pe.sections)
+    patch_section = pe.sections[0]
+    assert(patch_section.Name == b'.patch\x00\x00')
+    data_section = pe.sections[-1]
+
+    # Adjusting the last section
+    data_section.SizeOfRawData += initialized_padding
+    assert(data_section.SizeOfRawData <= data_section.Misc_VirtualSize)
+
+    # Now fix the patch section
+    # Size of section in memory is the same as the raw size.
+    patch_section.Misc_VirtualSize = patch_section_size
+    patch_section.SizeOfRawData = patch_section_size
+
+    patch_section.VirtualAddress = \
+        data_section.VirtualAddress + data_section.Misc_VirtualSize
+    patch_section.PointerToRawData = offset_raw
+
+    # We need RWX.
+    patch_section.Characteristics |= (
+        pefile.SECTION_CHARACTERISTICS['IMAGE_SCN_MEM_WRITE'] | \
+        pefile.SECTION_CHARACTERISTICS['IMAGE_SCN_MEM_READ'] | \
+        pefile.SECTION_CHARACTERISTICS['IMAGE_SCN_MEM_EXECUTE'] | \
+        pefile.SECTION_CHARACTERISTICS['IMAGE_SCN_CNT_CODE']
+    )
+
+    # -------------------------------------------------------------------------
+    # Fixing the PE Header
+    # -------------------------------------------------------------------------
+
+    size_of_code = 0
+    size_of_image = pe.OPTIONAL_HEADER.SizeOfHeaders
+    for section in pe.sections:
+        if section.Characteristics & \
+                pefile.SECTION_CHARACTERISTICS['IMAGE_SCN_CNT_CODE']:
+            size_of_code += section.Misc_VirtualSize
+        size_of_image += pad_size(
+            section.Misc_VirtualSize,
+            pe.OPTIONAL_HEADER.SectionAlignment
+        )
+
+    # Now we need to finally change the PE fro
+    # Disabling NX_COMPAT. You will get some warnings on some firmware!
+    # gotta make it 16 bit again as well.
+    pe.OPTIONAL_HEADER.DllCharacteristics &= \
+        ~pefile.DLL_CHARACTERISTICS['IMAGE_DLLCHARACTERISTICS_NX_COMPAT']
+    pe.OPTIONAL_HEADER.DllCharacteristics &= 0xff_ff
+
+    # Size of the image. This is important, and can cause boot failures if this
+    # is wrong!
+    print('sizeofimage:', pe.OPTIONAL_HEADER.SizeOfImage, size_of_image)
+    pe.OPTIONAL_HEADER.SizeOfImage = size_of_image
+
+    # Code we added
+    print('sizeofcode:', pe.OPTIONAL_HEADER.SizeOfCode, size_of_code)
+    pe.OPTIONAL_HEADER.SizeOfCode += size_of_code
+
+    # Our new uefi entrypoint.
+    uefi_entrypoint = patch_section.VirtualAddress + bl.get_key(b'uefi_e\x00')
+    old_entrypoint = pe.OPTIONAL_HEADER.AddressOfEntryPoint
+    if apply_uefi_patch:
+        print('entrypoint:', old_entrypoint, uefi_entrypoint)
+        pe.OPTIONAL_HEADER.AddressOfEntryPoint = uefi_entrypoint
+
+    # Some asserts to ensure things are A-OK!
+    assert((pe.OPTIONAL_HEADER.SizeOfImage %
+           pe.OPTIONAL_HEADER.SectionAlignment) == 0)
+
+    pe_data = bytearray(pe.write())
+
+    # -------------------------------------------------------------------------
+    # Final fill in for bad link, placing the payload in the PE
+    # -------------------------------------------------------------------------
+    called_from = patch_section.VirtualAddress
+    called_from += bl.get_key_offset(b'uefi_o\x00') + 4
+    orig_entrypoint = old_entrypoint - called_from
+
+    # need to calculate an offset to use to call the old entrypoint
+    bl.set_key(b'uefi_o\x00', struct.pack('<i', orig_entrypoint))
+
+    k = BIOS_TARGET_ADDRESS
+    k += offset_raw
+    k += bl.get_key(b'o_ptch\x00')
+    k -= text_start
+    bl.set_key(b'o_tocp\x00', struct.pack('<I', k))
+
+    # need to set the offsets we use patch the bios.
+    b_start, b_dest = bios_patch(pe_data, offset_raw, text_start, bios_start)
+    bl.set_key(b'o_bios\x00', struct.pack('<I', b_dest))
+    bl.set_key(b'o_dest\x00', struct.pack('<I', b_start))
+
+    # And write it out
+    bl_payload = pad(bl.get(), PAGE_SIZE)
+    assert(len(bl_payload) == patch_section_size)
+    pe_data[-patch_section_size:] = bl_payload
 
     return pe_data
