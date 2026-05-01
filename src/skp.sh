@@ -27,8 +27,17 @@ fi
 KPATH=$INTERMEDIATE \
     make -C ./src/runtime
 
-cp ./src/runtime/all.bin $INTERMEDIATE/runtime.bin
+echo $INTERMEDIATE
 
+# Link for this given kernel
+python3 ./src/scripts/generate_lds.py $INTERMEDIATE/kallsyms $INTERMEDIATE/curr.elf > /tmp/generated.lds
+cat /tmp/generated.lds
+ld -T./src/runtime/linker.lds -pie \
+     -Map=$INTERMEDIATE/output.map \
+    ./src/runtime/combined.o \
+    $PAYLOAD \
+    -o $INTERMEDIATE/runtime.bin
+rm /tmp/generated.lds
 
 # Patch the kernel image to install the payload
 python3 src/patch-bzimage \

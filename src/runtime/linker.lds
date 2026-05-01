@@ -1,6 +1,6 @@
 OUTPUT_FORMAT("binary")
 
-INCLUDE "generated.lds"
+INCLUDE "/tmp/generated.lds"
 
 SECTIONS
 {
