@@ -7,7 +7,7 @@ from the map file to get offsets.
 import os
 import subprocess
 from generate_lds import generate_lds
-
+from consts import WANT
 
 class BadLink:
     def __init__(self, runtime, kallsyms, linker_script, unpacked_kernel,
@@ -15,6 +15,9 @@ class BadLink:
         self._data = self._build_runtime(
             runtime, kallsyms, linker_script, unpacked_kernel, payload
         )
+        if len(self._data) > WANT:
+            raise Exception('Requested space is too small for this runtime')
+
         self._mapfile = self._extract('/tmp/output.map')
         self._to_set = {}
 
