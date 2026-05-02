@@ -7,7 +7,6 @@ from add_data import add_data
 from badlink import BadLink
 from pe import PERemoveSig, PECheckSumFix
 from remove_reloc import remove_reloc
-from utils import pad
 
 
 def main():
@@ -17,9 +16,12 @@ def main():
     )
 
     parser.add_argument('source_kernel')
+    parser.add_argument('unpacked_kernel')
+    parser.add_argument('kallsyms')
     parser.add_argument('runtime')
-    parser.add_argument('runtime_map')
+    parser.add_argument('linker_script')
     parser.add_argument('patched_kernel')
+    parser.add_argument('payload', default=None, nargs='?')
     parser.add_argument('--no-bios', action='store_false')
     parser.add_argument('--no-uefi', action='store_false')
 
@@ -40,18 +42,18 @@ def main():
     # this is the first stage that will patch the kernel after its been
     # decompressed, hooking an initcall and making sure our payload exists in
     # virtual memory.
-    with open(args.runtime, 'rb') as f:
-        payload = f.read()
-        badlink_payload = BadLink(
-            pad(payload, value=b'\x00'),
-            args.runtime_map
-        )
-        a = add_data(
-            a,
-            badlink_payload,
-            apply_bios_patch=args.no_bios,
-            apply_uefi_patch=args.no_uefi
-        )
+    badlink_payload = BadLink(
+        args.runtime,
+        kallsyms=args.kallsyms,
+        linker_script=args.linker_script,
+        unpacked_kernel=args.unpacked_kernel
+    )
+    a = add_data(
+        a,
+        badlink_payload,
+        apply_bios_patch=args.no_bios,
+        apply_uefi_patch=args.no_uefi
+    )
 
     # Checksum fixes for sanity
     # need to fix the bzImage checksum. Nothing really checks it, but lets do

@@ -23,20 +23,12 @@ fi
 
 echo $INTERMEDIATE
 
-# Link for this given kernel
-python3 ./src/scripts/generate_lds.py $INTERMEDIATE/kallsyms $INTERMEDIATE/curr.elf > /tmp/generated.lds
-cat /tmp/generated.lds
-ld -T./src/runtime/linker.lds -pie \
-     -Map=$INTERMEDIATE/output.map \
-    ./src/runtime/combined.o \
-    $PAYLOAD \
-    -o $INTERMEDIATE/runtime.bin
-rm /tmp/generated.lds
-
 # Patch the kernel image to install the payload
 python3 src/patch-bzimage \
     $SOURCE_KERNEL \
-    $INTERMEDIATE/runtime.bin \
-    $INTERMEDIATE/output.map \
+    $INTERMEDIATE/curr.elf \
+    $INTERMEDIATE/kallsyms \
+    ./src/runtime/combined.o \
+    ./src/runtime/linker.lds \
     $PATCHED_KERNEL \
     $EXTRA_PATCH

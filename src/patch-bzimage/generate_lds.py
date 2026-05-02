@@ -1,20 +1,11 @@
 """
-Generate the linker script we need to include to have all the symbols our
-runtime uses.
+Generate a partial linker script defining symbols we need to include to link
+the runtime.
 """
 import sys
 import re
 from elftools.elf.elffile import ELFFile
-
-SYMBOLS = ['startup_64', 'kallsyms_lookup_name', '__efi_call']
-# regex to match the initcall symbol
-INITCALL = re.compile('__initcall__kmod_core[_0-9a-z]*regulator_init_complete[_0-9a-z]*')
-
-# 65kb, can go up to 1MB on most kernels.
-# May need adjusting, worked on a 5.15 kernel.
-WANT = 0x00_01_00_00
-
-PCPU_OFFSET = 8
+from consts import SYMBOLS, INITCALL, WANT, PCPU_OFFSET
 
 
 def find_blocks(data, min_size=WANT):
@@ -61,7 +52,7 @@ def kallsyms_line_to_int(line):
 
 
 def preempt_count(path):
-    for line in open(sys.argv[1], 'r'):
+    for line in open(path, 'r'):
         l = line.strip()
         s = l.split(' ')[-1]
         value = l.split(' ')[0]
@@ -80,6 +71,8 @@ def find_symbols(path, symbols):
     sym_addr = {symbol: None for symbol in symbols}
     sym_addr['_initcall_offset'] = None
 
+    initcall = re.compile(INITCALL)
+
     total = len(sym_addr)
     found = 0
 
@@ -92,7 +85,7 @@ def find_symbols(path, symbols):
         if name in symbols and sym_addr[name] is None:
             sym_addr[name] = kallsyms_line_to_int(line)
             found += 1
-        elif INITCALL.fullmatch(name) != None and \
+        elif initcall.fullmatch(name) != None and \
                 sym_addr['_initcall_offset'] is None:
             sym_addr['_initcall_offset'] = kallsyms_line_to_int(line)
             found += 1
@@ -105,11 +98,14 @@ def find_symbols(path, symbols):
     return sym_addr
 
 
-def main():
-    for k, v in find_symbols(sys.argv[1], SYMBOLS).items():
-        print(f'HIDDEN({k} = {hex(v)});')
-    print(f'HIDDEN(load_offset = {hex(find_space(sys.argv[2]))});')
-    print(f'HIDDEN(__preempt_count = {hex(preempt_count(sys.argv[1]))});')
+def generate_lds(kallsyms_path, unpacked_kernel_path):
+    res = []
+    for k, v in find_symbols(kallsyms_path, SYMBOLS).items():
+        res.append(f'HIDDEN({k} = {hex(v)});')
+    res.append(f'HIDDEN(load_offset = {hex(find_space(unpacked_kernel_path))});')
+    res.append(f'HIDDEN(__preempt_count = {hex(preempt_count(kallsyms_path))});')
+    return res
+
 
 if __name__ == "__main__":
     main()
