@@ -4,10 +4,6 @@ INCLUDE "/tmp/generated.lds"
 
 SECTIONS
 {
-    .header : {
-        *(.header)
-    }
-
     .uefi_hook : {
         *(.uefi_hook)
     }

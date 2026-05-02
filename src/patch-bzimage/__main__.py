@@ -4,6 +4,7 @@ and rely on being able to create more sections.
 """
 import argparse
 from add_data import add_data
+from badlink import BadLink
 from pe import PERemoveSig, PECheckSumFix
 from remove_reloc import remove_reloc
 from utils import pad
@@ -17,6 +18,7 @@ def main():
 
     parser.add_argument('source_kernel')
     parser.add_argument('runtime')
+    parser.add_argument('runtime_map')
     parser.add_argument('patched_kernel')
     parser.add_argument('--no-bios', action='store_false')
     parser.add_argument('--no-uefi', action='store_false')
@@ -40,9 +42,13 @@ def main():
     # virtual memory.
     with open(args.runtime, 'rb') as f:
         payload = f.read()
+        badlink_payload = BadLink(
+            pad(payload, value=b'\x00'),
+            args.runtime_map
+        )
         a = add_data(
             a,
-            pad(payload, value=b'\x00'),
+            badlink_payload,
             apply_bios_patch=args.no_bios,
             apply_uefi_patch=args.no_uefi
         )

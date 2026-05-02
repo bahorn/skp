@@ -17,11 +17,13 @@ _code32_hook:
 ; the offset being generated in the instruction was wrong
 ; doing this because lea requires setting up all the segments and thats a pain.
     db 0xbe
+global _offset_to_copy
 _offset_to_copy:
     db 0, 0, 0, 0
 
 ; add. need to pass this in here
     db 0xbf
+global _offset_dest
 _offset_dest:
     db 0, 0, 0, 0
 
@@ -40,6 +42,7 @@ global _to_copy
 _to_copy:
 ; code to call _bios_entry, our code to patch the kernel in the BIOS boot path.
     db 0x68
+global _offset_bios_entry
 _offset_bios_entry:
     db 0, 0, 0, 0
     ret

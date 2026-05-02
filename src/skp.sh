@@ -43,5 +43,6 @@ rm /tmp/generated.lds
 python3 src/patch-bzimage \
     $SOURCE_KERNEL \
     $INTERMEDIATE/runtime.bin \
+    $INTERMEDIATE/output.map \
     $PATCHED_KERNEL \
     $EXTRA_PATCH
