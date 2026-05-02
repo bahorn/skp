@@ -21,12 +21,6 @@ if [ ! -f $INTERMEDIATE/curr.elf ]; then
         $INTERMEDIATE/curr.elf
 fi
 
-# compile the runtime.
-# This takes another environment variable called payload, but we do not pass it
-# directly in.
-KPATH=$INTERMEDIATE \
-    make -C ./src/runtime
-
 echo $INTERMEDIATE
 
 # Link for this given kernel
