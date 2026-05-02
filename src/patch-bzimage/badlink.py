@@ -6,51 +6,76 @@ from the map file to get offsets.
 """
 import os
 import subprocess
-from generate_lds import generate_lds
+from generate_lds import generate_lds, wrap_lds
 from consts import WANT
+
+
+def link(runtime, kallsyms, linker_script, unpacked_kernel, payload, want=None):
+    # Writing the symbols to generated.lds so the linker script can have it
+    # defined.
+    symbols = generate_lds(kallsyms, unpacked_kernel, want=want)
+
+    if want is not None:
+        print(symbols)
+
+    with open('/tmp/generated.lds', 'w') as f:
+        f.write(wrap_lds(symbols))
+
+    # now link the kernel with the generated scripts
+    cmd = [
+        'ld', f'-T{linker_script}', '-pie',
+        '-Map=/tmp/output.map',
+        '-o', '/tmp/runtime.bin',
+        runtime
+    ]
+    if payload is not None:
+        cmd.append(payload)
+    data = subprocess.run(cmd)
+
+    data = b''
+    with open('/tmp/runtime.bin', 'rb') as f:
+        data = f.read()
+
+    os.remove('/tmp/generated.lds')
+    os.remove('/tmp/runtime.bin')
+    return data
+
 
 class BadLink:
     def __init__(self, runtime, kallsyms, linker_script, unpacked_kernel,
                  payload=None):
+
+        self._size = self._determine_size(runtime, kallsyms, linker_script,
+                                          unpacked_kernel, payload)
+
         self._data = self._build_runtime(
             runtime, kallsyms, linker_script, unpacked_kernel, payload
         )
-        if len(self._data) > WANT:
-            raise Exception('Requested space is too small for this runtime')
 
         self._mapfile = self._extract('/tmp/output.map')
         self._to_set = {}
 
         os.remove('/tmp/output.map')
 
+    def _determine_size(self, runtime, kallsyms, linker_script, unpacked_kernel,
+                        payload=None):
+        """
+        Does a test link of the payload to determine its size.
+        """
+        return len(link(runtime, kallsyms, linker_script, unpacked_kernel,
+                        payload=payload, want=None))
+
     def _build_runtime(self, runtime, kallsyms, linker_script, unpacked_kernel,
                       payload=None):
         """
-        Link the runtime.
+        Link the runtime with the values all set.
         """
         # Writing the symbols to generated.lds so the linker script can have it
         # defined.
-        symbols = '\n'.join(generate_lds(kallsyms, unpacked_kernel))
-        print(symbols)
-        with open('/tmp/generated.lds', 'w') as f:
-            f.write(symbols)
-        # now link the kernel with the generated scripts
-        cmd = [
-            'ld', f'-T{linker_script}', '-pie',
-            '-Map=/tmp/output.map',
-            '-o', '/tmp/runtime.bin',
-            runtime
-        ]
-        if payload is not None:
-            cmd.append(payload)
-        data = subprocess.run(cmd)
-
-        data = b''
-        with open('/tmp/runtime.bin', 'rb') as f:
-            data = f.read()
-
-        os.remove('/tmp/generated.lds')
-        os.remove('/tmp/runtime.bin')
+        data = link(
+            runtime, kallsyms, linker_script, unpacked_kernel, payload=payload,
+            want=min(WANT, self._size)
+        )
         return bytearray(data)
 
     def get_key(self, key):
