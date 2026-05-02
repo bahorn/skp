@@ -8,7 +8,7 @@ from elftools.elf.elffile import ELFFile
 from consts import SYMBOLS, INITCALL, WANT, PCPU_OFFSET
 
 
-def find_blocks(data, min_size=WANT):
+def find_blocks(data, min_size):
     blocks = []
     i = len(data) - 1
     while i >= 0:
@@ -25,7 +25,7 @@ def find_blocks(data, min_size=WANT):
     return blocks
 
 
-def find_space(path):
+def find_space(path, want):
     fp = open(path, 'rb')
     data = fp.read()
 
@@ -39,7 +39,7 @@ def find_space(path):
 
     # now search from the end of .text for a large enough block of 0xcc
 
-    blocks = find_blocks(data[start:end])
+    blocks = find_blocks(data[start:end], min_size=WANT)
     if len(blocks) == 0:
         raise Exception('FAILURE')
 
@@ -98,13 +98,29 @@ def find_symbols(path, symbols):
     return sym_addr
 
 
-def generate_lds(kallsyms_path, unpacked_kernel_path):
-    res = []
+def generate_lds(kallsyms_path, unpacked_kernel_path, want=WANT):
+    res = {}
     for k, v in find_symbols(kallsyms_path, SYMBOLS).items():
-        res.append(f'HIDDEN({k} = {hex(v)});')
-    res.append(f'HIDDEN(load_offset = {hex(find_space(unpacked_kernel_path))});')
-    res.append(f'HIDDEN(__preempt_count = {hex(preempt_count(kallsyms_path))});')
+        res[k] = v
+
+    # We use load_offset to set the address of the patch from the rest of the
+    # kernel, which we store in spare space in the kernel.
+    # So if we want to set a good value for this, we actually need to link the
+    # payload once to see its size, then link again once we know the size.
+    if want is None:
+        res['load_offset'] = 0;
+    else:
+        res['load_offset'] = find_space(unpacked_kernel_path, want)
+
+    res['__preempt_count'] = preempt_count(kallsyms_path)
     return res
+
+
+def wrap_lds(lds):
+    res = []
+    for name, value in lds.items():
+        res.append(f'HIDDEN({name} = {hex(value)});')
+    return '\n'.join(res)
 
 
 if __name__ == "__main__":
