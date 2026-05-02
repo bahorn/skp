@@ -20,6 +20,7 @@ _uefi_entry:
 ; lets call the original entrypoint
     db 0xe8
 ; call offset
+global _original_uefi_offset
 _original_uefi_offset:
     db 0x00, 0x00, 0x00, 0x00
 

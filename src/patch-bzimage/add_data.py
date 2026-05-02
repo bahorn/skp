@@ -3,7 +3,6 @@ Function to append data to a kernel bzImage, and add apply our hooks.
 """
 import struct
 import pefile
-from badlink import BadLink
 from consts import PAGE_SIZE, BIOS_TARGET_ADDRESS
 from utils import pad_size, pad
 from bios import bios_patch
@@ -19,7 +18,6 @@ def get_text_start(pe):
         break
 
     return text_start
-
 
 
 def add_section(base_pe):
@@ -43,7 +41,7 @@ def add_section(base_pe):
     return pe_data
 
 
-def add_data(pe_data_orig, data, apply_bios_patch=True, apply_uefi_patch=True):
+def add_data(pe_data_orig, bl, apply_bios_patch=True, apply_uefi_patch=True):
     """
     Add a new section to store our patch in the PE, then append our data, and
     install the patches to transfer control to our payload.
@@ -52,10 +50,9 @@ def add_data(pe_data_orig, data, apply_bios_patch=True, apply_uefi_patch=True):
     # pefile, which I have to do a lot...
     text_start = get_text_start(pefile.PE(data=pe_data_orig))
 
-    bl = BadLink(data)
     # We can fetch the real entrypoints from badlink with this:
-    bios_start = bl.get_key(b'bios_e\x00')
-    code32 = bl.get_key(b'code32\x00')
+    bios_start = bl.get_key('_bios_entry')
+    code32 = bl.get_key('_code32_hook')
 
     # First, add a section to the PE that we can use later on.
     new_pe = add_section(pe_data_orig)
@@ -165,7 +162,7 @@ def add_data(pe_data_orig, data, apply_bios_patch=True, apply_uefi_patch=True):
     pe.OPTIONAL_HEADER.SizeOfCode += size_of_code
 
     # Our new uefi entrypoint.
-    uefi_entrypoint = patch_section.VirtualAddress + bl.get_key(b'uefi_e\x00')
+    uefi_entrypoint = patch_section.VirtualAddress + bl.get_key('_uefi_entry')
     old_entrypoint = pe.OPTIONAL_HEADER.AddressOfEntryPoint
     if apply_uefi_patch:
         print('entrypoint:', old_entrypoint, uefi_entrypoint)
@@ -181,22 +178,22 @@ def add_data(pe_data_orig, data, apply_bios_patch=True, apply_uefi_patch=True):
     # Final fill in for bad link, placing the payload in the PE
     # -------------------------------------------------------------------------
     called_from = patch_section.VirtualAddress
-    called_from += bl.get_key_offset(b'uefi_o\x00') + 4
+    called_from += bl.get_key('_original_uefi_offset') + 4
     orig_entrypoint = old_entrypoint - called_from
 
     # need to calculate an offset to use to call the old entrypoint
-    bl.set_key(b'uefi_o\x00', struct.pack('<i', orig_entrypoint))
+    bl.set_key('_original_uefi_offset', struct.pack('<i', orig_entrypoint))
 
     k = BIOS_TARGET_ADDRESS
     k += offset_raw
-    k += bl.get_key(b'o_ptch\x00')
+    k += bl.get_key('_to_copy')
     k -= text_start
-    bl.set_key(b'o_tocp\x00', struct.pack('<I', k))
+    bl.set_key('_offset_to_copy', struct.pack('<I', k))
 
     # need to set the offsets we use patch the bios.
     b_start, b_dest = bios_patch(pe_data, offset_raw, text_start, bios_start)
-    bl.set_key(b'o_bios\x00', struct.pack('<I', b_dest))
-    bl.set_key(b'o_dest\x00', struct.pack('<I', b_start))
+    bl.set_key('_offset_bios_entry', struct.pack('<I', b_dest))
+    bl.set_key('_offset_dest', struct.pack('<I', b_start))
 
     # And write it out
     bl_payload = pad(bl.get(), PAGE_SIZE)
