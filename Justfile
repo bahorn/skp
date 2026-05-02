@@ -110,6 +110,11 @@ run-grub-bios:
 patch-kernel kernel=env("SOURCE_KERNEL") payload=env("PAYLOAD", "") output=patched_kernel:
     mkdir -p {{INTERMEDIATE}}/`./tools/shasum.sh {{kernel}}`
 
+    # compile the runtime.
+    # This is kernel agnostic and works across them, with the payload only
+    # linked later on.
+    make -C ./src/runtime
+
     {{ if payload != "" { "PAYLOAD=" + payload  } else { "" } }} \
         ./src/skp.sh \
         {{kernel}} \
