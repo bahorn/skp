@@ -11,27 +11,35 @@ from consts import WANT
 
 
 def link(runtime, symbols, linker_script, payload):
-    with open('/tmp/generated.lds', 'w') as f:
-        f.write(wrap_lds(symbols))
+    pid = os.getpid()
+    runtime_fd = os.memfd_create('runtime')
+
+    ls = linker_script + wrap_lds(symbols)
+    linker_script_fd = os.memfd_create('linker_script')
+    os.write(linker_script_fd, bytes(ls, 'ascii'))
+
+    mapfile_fd = os.memfd_create('mapfile')
 
     # now link the kernel with the generated scripts
     cmd = [
-        'ld', f'-T{linker_script}', '-pie',
-        '-Map=/tmp/output.map',
-        '-o', '/tmp/runtime.bin',
+        'ld', f'-T/proc/{pid}/fd/{linker_script_fd}', '-pie',
+        f'-Map=/proc/{pid}/fd/{mapfile_fd}',
+        '-o', f'/proc/{pid}/fd/{runtime_fd}',
         runtime
     ]
     if payload is not None:
         cmd.append(payload)
-    data = subprocess.run(cmd)
+    subprocess.run(cmd)
 
-    data = b''
-    with open('/tmp/runtime.bin', 'rb') as f:
+    with os.fdopen(runtime_fd, 'rb') as f:
         data = f.read()
 
-    os.remove('/tmp/generated.lds')
-    os.remove('/tmp/runtime.bin')
-    return data
+    with os.fdopen(mapfile_fd, 'r') as f:
+        mapfile = f.read()
+
+    os.close(linker_script_fd)
+
+    return data, mapfile
 
 
 class BadLink:
@@ -43,17 +51,15 @@ class BadLink:
         self._unpacked_kernel = unpacked_kernel
         self._payload = payload
         temp_symbols = generate_lds(kallsyms, unpacked_kernel, want=None)
-        self._size = len(
-            link(runtime, temp_symbols, linker_script, payload)
-        )
+        test_link = link(runtime, temp_symbols, linker_script, payload)
+        self._size = len(test_link[0])
+        self._mapfile = test_link[1]
 
         # We are using the map file we get from the test link, not the final
         # artifact.
         # Shouldn't be an issue, just noting it!
-        self._mapfile = self._extract('/tmp/output.map')
+        self._mapfile = self._extract()
         self._to_set = {}
-
-        os.remove('/tmp/output.map')
 
     def get_key(self, key):
         return self._mapfile[key]
@@ -72,7 +78,7 @@ class BadLink:
         for k, v in self._to_set.items():
             symbols[k] = v
         print(wrap_lds(symbols))
-        data = link(
+        data, _ = link(
             self._runtime, symbols, self._linker_script, payload=self._payload,
         )
         return bytearray(data)
@@ -80,37 +86,35 @@ class BadLink:
     def size(self):
         return self._size
 
-    def _extract(self, mapfile):
+    def _extract(self):
         found = False
         res = {}
-        with open(mapfile) as f:
-            lines = f.read().split('\n')
-            for line in lines:
-                ls = line.strip()
-                if ls == 'Linker script and memory map':
-                    found = True
-                    continue
-                elif ls == '/DISCARD/':
-                    found = False
-                    continue
+        for line in self._mapfile.split('\n'):
+            ls = line.strip()
+            if ls == 'Linker script and memory map':
+                found = True
+                continue
+            elif ls == '/DISCARD/':
+                found = False
+                continue
 
-                if not found:
-                    continue
-                if ls == '':
-                    continue
+            if not found:
+                continue
+            if ls == '':
+                continue
 
-                ls = ls.split()
-                if len(ls) != 2:
-                    continue
+            ls = ls.split()
+            if len(ls) != 2:
+                continue
 
-                # filtering the sizes of sections.
-                try:
-                    int(ls[1], 16)
-                    continue
-                except Exception: # unsure which specific 
-                    pass
+            # filtering the sizes of sections.
+            try:
+                int(ls[1], 16)
+                continue
+            except Exception: # unsure which specific 
+                pass
 
-                res[ls[1]] = int(ls[0], 16)
+            res[ls[1]] = int(ls[0], 16)
 
         # first symbol
         offset = res['_uefi_entry']
