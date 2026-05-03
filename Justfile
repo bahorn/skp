@@ -164,3 +164,8 @@ test-batch test_kernel_list payload=env("PAYLOAD"):
 [group('run')]
 gdb:
     gdb -ex "target remote localhost:1234"
+
+
+[group('dev')]
+lint:
+    uvx ruff check ./src/patch-bzimage/

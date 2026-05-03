@@ -2,7 +2,6 @@
 Generate a partial linker script defining symbols we need to include to link
 the runtime.
 """
-import sys
 import re
 from elftools.elf.elffile import ELFFile
 from consts import SYMBOLS, INITCALL, WANT, PCPU_OFFSET
@@ -53,9 +52,7 @@ def kallsyms_line_to_int(line):
 
 def preempt_count(path):
     for line in open(path, 'r'):
-        l = line.strip()
-        s = l.split(' ')[-1]
-        value = l.split(' ')[0]
+        s = line.strip().split(' ')[-1]
         if s == '__preempt_count':
             # old kernel, we got the offset
             return kallsyms_line_to_int(line)
@@ -85,7 +82,7 @@ def find_symbols(path, symbols):
         if name in symbols and sym_addr[name] is None:
             sym_addr[name] = kallsyms_line_to_int(line)
             found += 1
-        elif initcall.fullmatch(name) != None and \
+        elif initcall.fullmatch(name) is not None and \
                 sym_addr['_initcall_offset'] is None:
             sym_addr['_initcall_offset'] = kallsyms_line_to_int(line)
             found += 1
