@@ -108,7 +108,12 @@ def generate_lds(kallsyms_path, unpacked_kernel_path, want=WANT):
     # So if we want to set a good value for this, we actually need to link the
     # payload once to see its size, then link again once we know the size.
     if want is None:
-        res['load_offset'] = 0;
+        res['load_offset'] = 0
+        # symbols we set in add_data.py
+        res['_original_uefi_offset'] = 0
+        res['_offset_to_copy'] = 0
+        res['_offset_dest'] = 0
+        res['_offset_bios_entry'] = 0
     else:
         res['load_offset'] = find_space(unpacked_kernel_path, want)
 
