@@ -70,7 +70,7 @@ def add_data(pe_data_orig, bl, apply_bios_patch=True, apply_uefi_patch=True):
     initialized_padding += PAGE_SIZE * 2
     new_pe += b'\x00' * initialized_padding
 
-    # Offser_raw is the offset in the patched kernel image where we'll be adding
+    # Offset_raw is the offset in the patched kernel image where we'll be adding
     # in our code.
     offset_raw = len(new_pe)
 
@@ -104,7 +104,6 @@ def add_data(pe_data_orig, bl, apply_bios_patch=True, apply_uefi_patch=True):
 
     # We need to adjust the size of the section before our .patch section to
     # account for the extra initialized data we added to it.
-    # print(pe.sections)
     patch_section = pe.sections[0]
     assert(patch_section.Name == b'.patch\x00\x00')
     data_section = pe.sections[-1]
@@ -178,22 +177,22 @@ def add_data(pe_data_orig, bl, apply_bios_patch=True, apply_uefi_patch=True):
     # Final fill in for bad link, placing the payload in the PE
     # -------------------------------------------------------------------------
     called_from = patch_section.VirtualAddress
-    called_from += bl.get_key('_original_uefi_offset') + 4
+    called_from += bl.get_key('_insn_original_uefi_offset')
     orig_entrypoint = old_entrypoint - called_from
-
-    # need to calculate an offset to use to call the old entrypoint
-    bl.set_key('_original_uefi_offset', struct.pack('<i', orig_entrypoint))
+    # Have to and to get this to be a 32bit signed int, else the linker will
+    # complain as this can be negative.
+    bl.set_key('_original_uefi_offset', orig_entrypoint & 0xff_ff_ff_ff)
 
     k = BIOS_TARGET_ADDRESS
     k += offset_raw
     k += bl.get_key('_to_copy')
     k -= text_start
-    bl.set_key('_offset_to_copy', struct.pack('<I', k))
+    bl.set_key('_offset_to_copy', k)
 
     # need to set the offsets we use patch the bios.
     b_start, b_dest = bios_patch(pe_data, offset_raw, text_start, bios_start)
-    bl.set_key('_offset_bios_entry', struct.pack('<I', b_dest))
-    bl.set_key('_offset_dest', struct.pack('<I', b_start))
+    bl.set_key('_offset_bios_entry', b_dest)
+    bl.set_key('_offset_dest', b_start)
 
     # And write it out
     bl_payload = pad(bl.get(), PAGE_SIZE)

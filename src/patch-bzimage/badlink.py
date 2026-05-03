@@ -10,14 +10,7 @@ from generate_lds import generate_lds, wrap_lds
 from consts import WANT
 
 
-def link(runtime, kallsyms, linker_script, unpacked_kernel, payload, want=None):
-    # Writing the symbols to generated.lds so the linker script can have it
-    # defined.
-    symbols = generate_lds(kallsyms, unpacked_kernel, want=want)
-
-    if want is not None:
-        print(symbols)
-
+def link(runtime, symbols, linker_script, payload):
     with open('/tmp/generated.lds', 'w') as f:
         f.write(wrap_lds(symbols))
 
@@ -44,60 +37,48 @@ def link(runtime, kallsyms, linker_script, unpacked_kernel, payload, want=None):
 class BadLink:
     def __init__(self, runtime, kallsyms, linker_script, unpacked_kernel,
                  payload=None):
-
-        self._size = self._determine_size(runtime, kallsyms, linker_script,
-                                          unpacked_kernel, payload)
-
-        self._data = self._build_runtime(
-            runtime, kallsyms, linker_script, unpacked_kernel, payload
+        self._runtime = runtime
+        self._kallsyms = kallsyms
+        self._linker_script = linker_script
+        self._unpacked_kernel = unpacked_kernel
+        self._payload = payload
+        temp_symbols = generate_lds(kallsyms, unpacked_kernel, want=None)
+        self._size = len(
+            link(runtime, temp_symbols, linker_script, payload)
         )
 
+        # We are using the map file we get from the test link, not the final
+        # artifact.
+        # Shouldn't be an issue, just noting it!
         self._mapfile = self._extract('/tmp/output.map')
         self._to_set = {}
 
         os.remove('/tmp/output.map')
 
-    def _determine_size(self, runtime, kallsyms, linker_script, unpacked_kernel,
-                        payload=None):
-        """
-        Does a test link of the payload to determine its size.
-        """
-        return len(link(runtime, kallsyms, linker_script, unpacked_kernel,
-                        payload=payload, want=None))
-
-    def _build_runtime(self, runtime, kallsyms, linker_script, unpacked_kernel,
-                      payload=None):
-        """
-        Link the runtime with the values all set.
-        """
-        # Writing the symbols to generated.lds so the linker script can have it
-        # defined.
-        data = link(
-            runtime, kallsyms, linker_script, unpacked_kernel, payload=payload,
-            want=min(WANT, self._size)
-        )
-        return bytearray(data)
-
     def get_key(self, key):
         return self._mapfile[key]
 
-    def set_key(self, key, value, size=4):
-        if key not in self._mapfile:
-            raise Exception('undefined symbol being set!')
-        offset = self._mapfile[key]
-        self._to_set[key] = (offset, value, size)
+    def set_key(self, key, value):
+        self._to_set[key] = value
 
     def get(self):
         """
         Return the data post linking
         """
-        for key, (offset, value, size) in self._to_set.items():
-            self._data[offset:offset + size] = value
-
-        return self._data
+        symbols = generate_lds(
+            self._kallsyms, self._unpacked_kernel,
+            want=min(WANT, self._size)
+        )
+        for k, v in self._to_set.items():
+            symbols[k] = v
+        print(wrap_lds(symbols))
+        data = link(
+            self._runtime, symbols, self._linker_script, payload=self._payload,
+        )
+        return bytearray(data)
 
     def size(self):
-        return len(self._data)
+        return self._size
 
     def _extract(self, mapfile):
         found = False
