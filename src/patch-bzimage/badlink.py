@@ -86,31 +86,31 @@ class BadLink:
         with open(mapfile) as f:
             lines = f.read().split('\n')
             for line in lines:
-                l = line.strip()
-                if l == 'Linker script and memory map':
+                ls = line.strip()
+                if ls == 'Linker script and memory map':
                     found = True
                     continue
-                elif l == '/DISCARD/':
+                elif ls == '/DISCARD/':
                     found = False
                     continue
 
                 if not found:
                     continue
-                if l == '':
+                if ls == '':
                     continue
 
-                l = l.split()
-                if len(l) != 2:
+                ls = ls.split()
+                if len(ls) != 2:
                     continue
 
                 # filtering the sizes of sections.
                 try:
-                    int(l[1], 16)
+                    int(ls[1], 16)
                     continue
-                except:
+                except Exception: # unsure which specific 
                     pass
 
-                res[l[1]] = int(l[0], 16)
+                res[ls[1]] = int(ls[0], 16)
 
         # first symbol
         offset = res['_uefi_entry']
