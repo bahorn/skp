@@ -42,10 +42,13 @@ def main():
     # this is the first stage that will patch the kernel after its been
     # decompressed, hooking an initcall and making sure our payload exists in
     # virtual memory.
+    with open(args.linker_script) as f:
+        linker_script = f.read()
+
     badlink_payload = BadLink(
         args.runtime,
         kallsyms=args.kallsyms,
-        linker_script=args.linker_script,
+        linker_script=linker_script,
         unpacked_kernel=args.unpacked_kernel
     )
     a = add_data(

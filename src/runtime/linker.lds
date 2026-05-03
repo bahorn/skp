@@ -1,6 +1,6 @@
 OUTPUT_FORMAT("binary")
 
-INCLUDE "/tmp/generated.lds"
+# We append symbols the final output needs in patch-bzimage/badlink.py
 
 SECTIONS
 {
