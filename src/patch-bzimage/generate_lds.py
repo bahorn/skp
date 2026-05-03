@@ -126,7 +126,3 @@ def wrap_lds(lds):
     for name, value in lds.items():
         res.append(f'HIDDEN({name} = {hex(value)});')
     return '\n'.join(res)
-
-
-if __name__ == "__main__":
-    main()
