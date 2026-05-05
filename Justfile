@@ -6,7 +6,16 @@ rootfs := env("ROOTFS", BASEDIR / "samples/rootfs/openwrt-rootfs.img")
 patched_kernel := env("PATCHED_KERNEL", BASEDIR / "samples/patched-kernel.bzimage")
 grub_root := env("GRUB_ROOT", BASEDIR / "samples/grub-root")
 config_dir := BASEDIR / "configs"
-extra_qemu := ""
+# Having the debuging features here so it can be easily turned off in the
+# testing scripts, allowing them to be parallel.
+extra_qemu := "-monitor tcp:127.0.0.1:55555,server,nowait" + \
+    " -gdb tcp::1234" + \
+    " -netdev user,id=network0" + \
+    " -device e1000,netdev=network0,mac=52:54:00:12:34:56"
+skip_build_runtime := "false"
+# We have a unique id we generate each run of the justfile so that we can run
+# instances of a few of the commands that need files in parallel
+run_id := `uuidgen`
 
 # Extra flags to patch-bzimage, can disable uefi or bios patching with this.
 export EXTRA_PATCH := env("EXTRA_PATCH", "")
@@ -28,39 +37,36 @@ setup:
 # Run a Kernel via UEFI with OVMF
 [group('run')]
 run-uefi:
-    cp /usr/share/OVMF/OVMF_VARS_4M.fd `pwd`/tmp/OVMF_VARS_4M.fd
+    python3 tools/memfd_serve.py ovmf_vars-{{run_id}} \
+        /usr/share/OVMF/OVMF_VARS_4M.fd &
+    python3 tools/memfd_serve.py rootfs-{{run_id}} \
+        {{rootfs}} &
     qemu-system-x86_64 \
         -accel kvm \
         -m 4G \
         -kernel {{patched_kernel}} \
         -nographic \
-        -gdb tcp::1234 \
         -append "console=ttyS0,9600 root=/dev/vda" \
-        -monitor tcp:127.0.0.1:55555,server,nowait \
-        -netdev user,id=network0 \
-        -device e1000,netdev=network0,mac=52:54:00:12:34:56 \
-        -drive file={{rootfs}},format=raw,if=virtio,index=0 \
+        -drive file=`./tools/mff.sh rootfs-{{run_id}}`,format=raw,if=virtio,index=0 \
         -drive if=pflash,format=raw,readonly=on,file=/usr/share/OVMF/OVMF_CODE_4M.fd \
-        -drive if=pflash,format=raw,file=`pwd`/tmp/OVMF_VARS_4M.fd \
+        -drive if=pflash,format=raw,file=`./tools/mff.sh ovmf_vars-{{run_id}}` \
         {{extra_qemu}}
 
 # Run a Kernel via BIOS
 [group('run')]
 run-bios:
+    python3 tools/memfd_serve.py rootfs-{{run_id}} \
+        {{rootfs}} &
     qemu-system-x86_64 \
         -accel kvm \
-        -hda {{rootfs}} \
+        -hda `./tools/mff.sh rootfs-{{run_id}}` \
         -m 4G \
         -kernel {{patched_kernel}} \
         -nographic \
-        -gdb tcp::1234 \
         -append "console=ttyS0,9600 root=/dev/sda" \
-        -monitor tcp:127.0.0.1:55555,server,nowait \
-        -netdev user,id=network0 \
-        -device e1000,netdev=network0,mac=52:54:00:12:34:56 \
         {{extra_qemu}}
 
-# Run the Kernel via UEFI GRUB
+# Run the Kernel via UEFI GRUB -  *Can not be ran in parallel!*
 [group('run')]
 run-grub-uefi:
     -rm -r {{grub_root}}
@@ -74,17 +80,13 @@ run-grub-uefi:
         -accel kvm \
         -m 4G \
         -nographic \
-        -gdb tcp::1234 \
-        -monitor tcp:127.0.0.1:55555,server,nowait \
-        -netdev user,id=network0 \
-        -device e1000,netdev=network0,mac=52:54:00:12:34:56 \
         -drive file=fat:rw:samples/grub-root,if=ide,index=0 \
         -drive file={{rootfs}},format=raw,if=virtio \
         -drive if=pflash,format=raw,readonly=on,file=/usr/share/OVMF/OVMF_CODE_4M.fd \
         -drive if=pflash,format=raw,file=`pwd`/tmp/OVMF_VARS_4M.fd \
         {{extra_qemu}}
 
-# Run the kernel via a BIOS grub rescue imagea
+# Run the kernel via a BIOS grub rescue images - *Can not be ran in parallel!*
 [group('run')]
 run-grub-bios:
     -rm -r {{grub_root}}
@@ -99,21 +101,17 @@ run-grub-bios:
         -accel kvm \
         -m 4G \
         -nographic \
-        -gdb tcp::1234 \
-        -monitor tcp:127.0.0.1:55555,server,nowait \
-        -netdev user,id=network0 \
-        -device e1000,netdev=network0,mac=52:54:00:12:34:56 \
         {{extra_qemu}}
 
 # Patch a kernel
 [group('build')]
-patch-kernel kernel=env("SOURCE_KERNEL") payload=env("PAYLOAD", "") output=patched_kernel:
+patch-kernel kernel=env("SOURCE_KERNEL") output=patched_kernel payload=env("PAYLOAD", ""):
     mkdir -p {{INTERMEDIATE}}/`./tools/shasum.sh {{kernel}}`
 
     # compile the runtime.
     # This is kernel agnostic and works across them, with the payload only
     # linked later on.
-    make -C ./src/runtime
+    {{ if skip_build_runtime != "true" { "make -C ./src/runtime" } else { "" } }}
 
     {{ if payload != "" { "PAYLOAD=" + payload  } else { "" } }} \
         ./src/skp.sh \
@@ -156,9 +154,10 @@ clean:
 
 # Test a list of kernels
 [group('testing')]
-test-batch test_kernel_list payload=env("PAYLOAD"):
+test-batch test_kernel_list payload=env("PAYLOAD", ""):
+    make -C ./src/runtime
     cat {{test_kernel_list}} | \
-        xargs -I HERE ./tools/testing/test-batch.sh HERE {{payload}}
+        parallel -j 4 -I HERE ./tools/testing/test-batch.sh HERE {{payload}}
 
 # Connect to the GDB server
 [group('run')]
