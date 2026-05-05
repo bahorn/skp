@@ -1,6 +1,5 @@
 """
-PoC to patch a bzImage, only for uefi as we are hooking the the uefi functions
-and rely on being able to create more sections.
+Our main, implementing the argument parser and workflow.
 """
 import argparse
 from add_data import add_data
@@ -9,24 +8,7 @@ from pe import PERemoveSig, PECheckSumFix
 from remove_reloc import remove_reloc
 
 
-def main():
-    parser = argparse.ArgumentParser(
-        prog='patch-bzimage',
-        description='Installs the runtime in a kernel bzImage',
-    )
-
-    parser.add_argument('source_kernel')
-    parser.add_argument('unpacked_kernel')
-    parser.add_argument('kallsyms')
-    parser.add_argument('runtime')
-    parser.add_argument('linker_script')
-    parser.add_argument('patched_kernel')
-    parser.add_argument('--payload', default=None)
-    parser.add_argument('--no-bios', action='store_false')
-    parser.add_argument('--no-uefi', action='store_false')
-
-    args = parser.parse_args()
-
+def patch_kernel(args):
     a = None
 
     with open(args.source_kernel, 'rb') as f:
@@ -66,6 +48,34 @@ def main():
     last = PECheckSumFix(a).fix()
     with open(args.patched_kernel, 'wb') as f:
         f.write(last)
+
+
+def main():
+    parser = argparse.ArgumentParser(
+        prog='patch-bzimage',
+        description='Patches kernel bzImages',
+    )
+
+    subparsers = parser.add_subparsers(help="Commands", dest='command')
+    patch = subparsers.add_parser('patch', help='Patch the kernel')
+
+    patch.add_argument('source_kernel')
+    patch.add_argument('unpacked_kernel')
+    patch.add_argument('kallsyms')
+    patch.add_argument('runtime')
+    patch.add_argument('linker_script')
+    patch.add_argument('patched_kernel')
+    patch.add_argument('--payload', default=None)
+    patch.add_argument('--no-bios', action='store_false')
+    patch.add_argument('--no-uefi', action='store_false')
+
+    args = parser.parse_args()
+
+    match args.command:
+        case 'patch':
+            patch_kernel(args)
+        case _:
+            parser.print_help()
 
 
 if __name__ == "__main__":
