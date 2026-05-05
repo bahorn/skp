@@ -25,7 +25,7 @@ fi
 echo $INTERMEDIATE
 
 # Patch the kernel image to install the payload
-python3 src/patch-bzimage \
+python3 src/patch-bzimage patch \
     $SOURCE_KERNEL \
     $INTERMEDIATE/curr.elf \
     $INTERMEDIATE/kallsyms \
