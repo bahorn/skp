@@ -6,7 +6,7 @@ from add_data import add_data
 from badlink import BadLink
 from pe import PERemoveSig, PECheckSumFix
 from remove_reloc import remove_reloc
-from generate_lds import find_space, find_symbols
+from generate_lds import find_space, find_symbols, Kallsyms
 from consts import WANT, SYMBOLS
 
 
@@ -65,7 +65,8 @@ def debug_kernel(args):
     # this kernel being patchable.
     print('space', find_space(args.unpacked_kernel, want=WANT))
     # This broke on 7.0 when the memory layout changed, causes negative symbols.
-    for symbol, value in find_symbols(args.kallsyms, SYMBOLS).items():
+    kallsyms = Kallsyms(args.kallsyms)
+    for symbol, value in find_symbols(kallsyms, SYMBOLS).items():
         print('*', symbol, value, value < 0)
 
 

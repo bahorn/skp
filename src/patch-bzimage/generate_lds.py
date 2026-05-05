@@ -50,54 +50,69 @@ def kallsyms_line_to_int(line):
     return int(f'0x{v}', 16)
 
 
-def preempt_count(path):
-    for line in open(path, 'r'):
-        s = line.strip().split(' ')[-1]
-        if s == '__preempt_count':
-            # old kernel, we got the offset
-            return kallsyms_line_to_int(line)
+class Kallsyms:
+    """
+    Wrapper to look up symbols and return their address
+    """
 
-        if s == 'pcpu_hot':
-            return kallsyms_line_to_int(line) + PCPU_OFFSET
+    def __init__(self, path):
+        self._syms = {}
+        for line in open(path, 'r'):
+            name = line.split(' ')[-1].strip()
+            if name not in self._syms:
+                self._syms[name] = []
+            self._syms[name].append(kallsyms_line_to_int(line))
+
+    def syms(self):
+        return self._syms.keys()
+
+    def get(self, symbol):
+        return self._syms.get(symbol)
+
+
+def preempt_count(kallsyms):
+    res = kallsyms.get('__preempt_count')
+    if res is not None:
+        return res[0]
+
+    res = kallsyms.get('pcpu_hot')
+    if res is not None:
+        res = res[0]
+        res += PCPU_OFFSET
+        return res
 
     raise Exception('finding preempt count failed')
 
 
-def find_symbols(path, symbols):
+def find_symbols(kallsyms, symbols):
     text = None
     sym_addr = {symbol: None for symbol in symbols}
     sym_addr['_initcall_offset'] = None
 
     initcall = re.compile(INITCALL)
 
-    total = len(sym_addr)
-    found = 0
+    text = kallsyms.get('_text')[0]
+    for symbol in symbols:
+        sym_addr[symbol] = kallsyms.get(symbol)
+        assert(len(sym_addr[symbol]) == 1)
 
-    for line in open(path, 'r'):
-        name = line.split(' ')[-1].strip()
-
-        if name == '_text':
-            text = kallsyms_line_to_int(line)
-
-        if name in symbols and sym_addr[name] is None:
-            sym_addr[name] = kallsyms_line_to_int(line)
-            found += 1
-        elif initcall.fullmatch(name) is not None and \
+    for sym in kallsyms.syms():
+        if initcall.fullmatch(sym) is not None and \
                 sym_addr['_initcall_offset'] is None:
-            sym_addr['_initcall_offset'] = kallsyms_line_to_int(line)
-            found += 1
-
-        if text is not None and found >= total:
-            break
+            sym_addr['_initcall_offset'] = kallsyms.get(sym)
+            assert(len(sym_addr['_initcall_offset']) == 1)
 
     for symbol in sym_addr.keys():
+        sym_addr[symbol] = sym_addr[symbol][0]
         sym_addr[symbol] -= text
+
     return sym_addr
 
 
 def generate_lds(kallsyms_path, unpacked_kernel_path, want=WANT):
+    kallsyms = Kallsyms(kallsyms_path)
     res = {}
-    for k, v in find_symbols(kallsyms_path, SYMBOLS).items():
+    for k, v in find_symbols(kallsyms, SYMBOLS).items():
         res[k] = v
 
     # We use load_offset to set the address of the patch from the rest of the
@@ -114,7 +129,7 @@ def generate_lds(kallsyms_path, unpacked_kernel_path, want=WANT):
     else:
         res['load_offset'] = find_space(unpacked_kernel_path, want)
 
-    res['__preempt_count'] = preempt_count(kallsyms_path)
+    res['__preempt_count'] = preempt_count(kallsyms)
     return res
 
 
