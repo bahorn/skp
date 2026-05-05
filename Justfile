@@ -141,9 +141,9 @@ get-grub-uefi:
 
 # Use easylkb to build a kernel
 [group('setup')]
-easylkb version kconfig=(BASEDIR / "configs/test.KConfig"):
+easylkb version kconfig=(BASEDIR / "configs/test.KConfig") extra="":
     cd ./tools/easylkb/ && \
-        python3 easylkb.py -k {{version}} --kconfig {{kconfig}} -dcm 
+        python3 easylkb.py -k {{version}} --kconfig {{kconfig}} -dcm {{ extra }}
 
 # Clean the Project
 [group('build')]
