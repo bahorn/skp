@@ -21,7 +21,7 @@ def main():
     parser.add_argument('runtime')
     parser.add_argument('linker_script')
     parser.add_argument('patched_kernel')
-    parser.add_argument('payload', default=None, nargs='?')
+    parser.add_argument('--payload', default=None)
     parser.add_argument('--no-bios', action='store_false')
     parser.add_argument('--no-uefi', action='store_false')
 
@@ -49,7 +49,8 @@ def main():
         args.runtime,
         kallsyms=args.kallsyms,
         linker_script=linker_script,
-        unpacked_kernel=args.unpacked_kernel
+        unpacked_kernel=args.unpacked_kernel,
+        payload=args.payload,
     )
     a = add_data(
         a,
