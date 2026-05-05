@@ -1,11 +1,13 @@
 # SKP - Modern x86 Linux Kernel Patching
 
 This is a PoC tool to patch x86 Linux kernel bzImages to load a kSHELF.
-This is a modern version of a the idea from Phrack 60-8 [1], but doing a very
+This is a modern version of the idea from Phrack 60-8 [1], but doing a very
 different style of patches.
 
-This supports 5.15+ for both UEFI and BIOS, tested up to 6.11 (which was
-released today at time of writing).
+Supports 5.15+ for both UEFI and BIOS, tested up to 6.19.
+Stable up to 6.17, ongoing work on the UEFI path in 6.18/6.19 (requires a tiny
+patch).
+7.0 is in-progress and not yet supported.
 
 Primarily tested with kernel images from Ubuntu, and my testing KConfig is
 derived from the default Ubuntu configuration.
@@ -13,9 +15,11 @@ Other distros might do something that breaks this, though I hope not :)
 Make sure ftrace is enabled and you have `CONFIG_REGULATOR` as that is used in
 the initcall hook.
 
-
 The payloads can be compiled with
-[klude2](https://github.com/bahorn/klude2). Modify `src/sample` to change what it does. all kernel symbols are supported.
+[klude2](https://github.com/bahorn/klude2). Modify one of the samples in
+`tools/klude2/src/sample` to change what it does.
+All kernel symbols are supported, and they can work across kernel versions but
+you are better off building the payload for your specific kernel.
 
 I have set this up to not need you to provide a payload, as the default
 behaviour is just to print some info during the kernels boot.
@@ -36,23 +40,26 @@ Available recipes:
 
     [build]
     clean         # Clean the Project
-    patch-kernel kernel=env("SOURCE_KERNEL") payload=env("PAYLOAD", "") # Patch a kernel
+    patch-kernel kernel=env("SOURCE_KERNEL") output=patched_kernel payload=env("PAYLOAD", "") # Patch a kernel
+
+    [dev]
+    lint
 
     [run]
     gdb           # Connect to the GDB server
     run-bios      # Run a Kernel via BIOS
-    run-grub-bios # Run the kernel via a BIOS grub rescue imagea
-    run-grub-uefi # Run the Kernel via UEFI GRUB
+    run-grub-bios # Run the kernel via a BIOS grub rescue images - *Can not be ran in parallel!*
+    run-grub-uefi # Run the Kernel via UEFI GRUB -  *Can not be ran in parallel!*
     run-uefi      # Run a Kernel via UEFI with OVMF
 
     [setup]
-    easylkb version kconfig=(BASEDIR / "configs/test.KConfig") # Use easylkb to build a kernel
+    easylkb version kconfig=(BASEDIR / "configs/test.KConfig") extra="" # Use easylkb to build a kernel
     get-grub-uefi # Download the Ubuntu's UEFI build of GRUB
     get-rootfs    # Download OpenWRTs rootfs
     setup         # Install dependencies to build the project
 
     [testing]
-    test-batch test_kernel_list payload=env("PAYLOAD") # Test a list of kernels
+    test-batch test_kernel_list payload=env("PAYLOAD", "") # Test a list of kernels
 ```
 
 To setup the virtualenv and dependencies:
@@ -60,30 +67,19 @@ To setup the virtualenv and dependencies:
 just setup
 ```
 
-Then you need to the the following environment variables before you can patch a
-kernel:
+Then patch a kernel with:
 ```
-export SOURCE_KERNEL=./sample-kernels/vmlinuz-6.8.0-41-generic
-export PAYLOAD=../artifacts/main.bin
+just patch-kernel path/to/kernel path/to/output path/to/payload
 ```
 
-The following envvars exist:
-* `PATCHED_KERNEL` is the output kernel bzImage
-* `SOURCE_KERNEL` is the kernel image you are modifying,
-* `ROOTFS` is a rootfs to use for testing.
-* `PAYLOAD` is the kSHELF you want to load that was built with klude2.
-* `OVMFFW` is the OVMF firmware build you want to run in your tests.
-* `EXTRA_PATCH` is flags to src/patch-bzimage. You can disable uefi and bios
-  patching with `--no-uefi` and `--no-bios` respectively.
-* `EXTRA_STAGE2_DEFINE` can be used to unset the DIRECT_PATCHING feature.
+The payload can be omitted, and it will just print a confirmation during boot
+which is useful for debugging.
 
-(You can also set these by an a per command basis, see the Justfile for internal
-names, then set those before the command you are trying to run!)
-
-With those, you can run `just patch-kernel` and the patched kernel will be
-created.
-There is also support for two positional arguments to change the source kernel
-and payload instead of via the envvars.
+For example:
+```
+just patch-kernel ./tools/easylkb/kernel/linux-6.8/arch/x86/boot/bzImage \
+    ./samples/patched-kernel.bzimage ./tools/klude2/artifacts/payload.o
+```
 
 You can then the following to test it out:
 * `just run-uefi`
@@ -91,17 +87,16 @@ You can then the following to test it out:
 * `just run-grub-uefi`
 * `just run-grub-bios`
 
-The default configuration requires one of the following to start the VM:
-* attaching gdb with `gdb -ex "target remote localhost:1234"`
-* connecting to `localhost:55555` with netcat to start the virtual machine.
+(Those default to `./samples/patched-kernel.bzimage` for the kernel)
 
-Prefixing the command with `extra_qemu=""`, e.g `just extra_qemu="" run-uefi`
-will also autostart the kernel (and also allows extra qemu arguments)
-
+The default configuration runs the qemu monitor on port localhost:55555 and a
+gdbserver on localhost:1234.
+This can be disabled by refixing the command with `extra_qemu=""`,
+e.g `just extra_qemu="" run-uefi`.
 
 If you:
 * need a rootfs, run `just get-rootfs` to download one from OpenWRT.
-* want to run this under uefi GRUB, run `just get-grub-uefi` to setup Ubuntu's
+* Want to run this under uefi GRUB, run `just get-grub-uefi` to setup Ubuntu's
   UEFI GRUB (Note that the grub version you install limits which kernels you can
   boot!)
 
@@ -115,6 +110,8 @@ Adjust the version to try other versions, and you can also change the kconfig as
 well.
 The output kernel will be in
 `./tools/easylkb/kernel/linux-VERSION/arch/x86/boot/bzImage`.
+This uses my dev fork on easylkb, which has the optional feature to build the
+kernel in a container and also provide point versions.
 
 ## Testing
 
@@ -137,6 +134,8 @@ An example list of kernels looks like:
 ```
 
 ### Bisecting Kernels
+
+**this section is a bit out of date**
 
 You'll probably end up needing to bisect changes to determine which changes
 broke things.
@@ -161,6 +160,22 @@ The bisect.sh script does assume old is the one that causes the issue, and new
 is the one where it is fixed.
 You can change this behaviour by removing the `--invert` in
 `./tools/testing/bisect.sh`
+
+## Project Structure
+
+* `tools/` - scripts / external projects. Covers klude2, easylkb, vmlinux-to-elf
+  and random scripts for testing.
+* `configs/` - kernel configs, the list of kernels to test against, and grub
+  configs.
+* `src/patch-bzimage` - the core, which modifies a kernel bzImage to run our
+  payload.
+* `src/runtime` - the code the will be patched in the kernel (except the payload
+  you provide). This is built independent of the kernel version and is only
+  properly linked at patching time by `patch-bzimage`.
+* `src/skp.sh` - a wrapper script that unpacks kernels so they can be used with
+  `patch-bzimage`. This is what is invoked by `just patch-kernel`.
+* `Justfile` - Just is a command runner, that works better than using makefiles.
+   You'll want to read this one to understand the project.
 
 ## Techniques
 
@@ -192,8 +207,8 @@ of arbitary sizes, while the direct patch only allows ~1MB, depending on the
 kernel image (see `src/scripts/find_space.py` where it is at the time of writing
 set to 65kb) and also working on older kernel versions as `ExitBootServices()`
 is called much earlier in the boot process.
-The primary disavantage is that you have to do a runtime hook, and the path is
-seperate from what the BIOS hook does.
+The primary disadvantage is that you have to do a runtime hook, and the path is
+separate from what the BIOS hook does.
 
 The runtime hook is probably what you should use in most cases however.
 You can force it to be always used by unseting `DIRECT_PATCHING` in the envvar.
@@ -285,17 +300,11 @@ payloads strings as an argument.
 Noticed this only in 6.10, wasn't sure if there was some changes related to
 KASAN here as my builds for 6.9 also had KASAN enabled.
 
-On my remaining list todo is the following:
-* Code cleanup, src/patch-bzimage is a bit of a mess right now.
-* Maybe support older kernels. Unsure if I'll bother, as the issue is dealing
-  with things like symbols being renamed, etc. I only ever want to care about
-  kernels released in the last 5 years. 20.04 is the furthest I want to go back
-  to.
-* A proper writeup.
-
 ## License
 
 GPL2
+
+PRs welcome, but please no LLM spam! This is an LLM-free project.
 
 ## References
 
