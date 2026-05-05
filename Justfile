@@ -113,11 +113,12 @@ patch-kernel kernel=env("SOURCE_KERNEL") output=patched_kernel payload=env("PAYL
     # linked later on.
     {{ if skip_build_runtime != "true" { "make -C ./src/runtime" } else { "" } }}
 
-    {{ if payload != "" { "PAYLOAD=" + payload  } else { "" } }} \
-        ./src/skp.sh \
+
+    ./src/skp.sh \
         {{kernel}} \
         {{INTERMEDIATE}}/`./tools/shasum.sh {{kernel}}` \
-        {{output}}
+        {{output}} \
+        {{ if payload != "" { "--payload=" + payload } else { "" } }}
 
 # Download OpenWRTs rootfs
 [group('setup')]

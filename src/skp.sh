@@ -3,6 +3,7 @@
 SOURCE_KERNEL=$1
 INTERMEDIATE=$2
 PATCHED_KERNEL=$3
+PAYLOAD=$4
 
 echo $PAYLOAD
 
@@ -31,4 +32,5 @@ python3 src/patch-bzimage \
     ./src/runtime/combined.o \
     ./src/runtime/linker.lds \
     $PATCHED_KERNEL \
+    $PAYLOAD \
     $EXTRA_PATCH
