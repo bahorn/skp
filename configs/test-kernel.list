@@ -2,3 +2,4 @@
 ./tools/easylkb/kernel/linux-6.11/arch/x86/boot/bzImage
 ./tools/easylkb/kernel/linux-6.8/arch/x86/boot/bzImage
 ./tools/easylkb/kernel/linux-6.5/arch/x86/boot/bzImage
+./tools/easylkb/kernel/linux-5.15/arch/x86/boot/bzImage
