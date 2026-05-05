@@ -6,9 +6,14 @@ from add_data import add_data
 from badlink import BadLink
 from pe import PERemoveSig, PECheckSumFix
 from remove_reloc import remove_reloc
+from generate_lds import find_space, find_symbols
+from consts import WANT, SYMBOLS
 
 
 def patch_kernel(args):
+    """
+    Actually patch the kernel
+    """
     a = None
 
     with open(args.source_kernel, 'rb') as f:
@@ -50,6 +55,20 @@ def patch_kernel(args):
         f.write(last)
 
 
+def debug_kernel(args):
+    """
+    Display debug information to help figure out details to improve this tool.
+
+    Not for normal users!
+    """
+    # We need to have space to find a basic test case if we have any chance of
+    # this kernel being patchable.
+    print('space', find_space(args.unpacked_kernel, want=WANT))
+    # This broke on 7.0 when the memory layout changed, causes negative symbols.
+    for symbol, value in find_symbols(args.kallsyms, SYMBOLS).items():
+        print('*', symbol, value, value < 0)
+
+
 def main():
     parser = argparse.ArgumentParser(
         prog='patch-bzimage',
@@ -57,8 +76,8 @@ def main():
     )
 
     subparsers = parser.add_subparsers(help="Commands", dest='command')
-    patch = subparsers.add_parser('patch', help='Patch the kernel')
 
+    patch = subparsers.add_parser('patch', help='Patch the kernel')
     patch.add_argument('source_kernel')
     patch.add_argument('unpacked_kernel')
     patch.add_argument('kallsyms')
@@ -69,11 +88,18 @@ def main():
     patch.add_argument('--no-bios', action='store_false')
     patch.add_argument('--no-uefi', action='store_false')
 
+
+    debug = subparsers.add_parser('debug', help='Development debug info')
+    debug.add_argument('unpacked_kernel')
+    debug.add_argument('kallsyms')
+
     args = parser.parse_args()
 
     match args.command:
         case 'patch':
             patch_kernel(args)
+        case 'debug':
+            debug_kernel(args)
         case _:
             parser.print_help()
 
