@@ -133,6 +133,38 @@ An example list of kernels looks like:
 ./tools/easylkb/kernel/linux-6.0/arch/x86/boot/bzImage
 ```
 
+### Debugging
+
+There a few common things that break between kernel versions:
+* Changes to the kernels PE header / structure.
+* Symbols being changed (commonly breaking your final payloads).
+* kallsyms changing, breaking vmlinux-to-elf for that versions.
+
+To debug PE issues, I'd advise using PE-Bear as it shows color indicators when
+something is wrong, e.g if a section is not fully mapped (which happens if the 
+calculations for adding data to it are wrong).
+Otherwise, using imhex with the PE pattern is good, this was the main tool to
+help do development early on, or just readpe from your distros package manager
+is useful enough.
+
+Your payload will need some symbols, and assume structures look in specific way.
+Make sure you built it against your target kernel!
+Sometimes you can get away with using it across kernel versions, just hard to
+know when it will break.
+If its just a lack of a symbol there will be something printed to the kernel
+log, but structure changes will be more insidious.
+
+I'd advise doing sanity checks on the kallsyms output you get from
+vmlinux-to-elf, as you can work out if the addresses look wrong.
+
+You probably also want to search the kernels commit history, often not to hard
+to find a likely issue there.
+
+Very weird issues have occurred due to preemption in the kernel (specifically
+the UEFI runtime hook breaking), so be mindful of that.
+A bug that occurred probabilistically was due to this in 6.19, and the lack of
+disabling preemption broke 5.15.
+
 ### Bisecting Kernels
 
 **this section is a bit out of date**
@@ -204,9 +236,9 @@ This hook can do one of two things:
 
 The runtime hook has some advantages in terms of it allowing the use of payloads
 of arbitary sizes, while the direct patch only allows ~1MB, depending on the
-kernel image (see `src/scripts/find_space.py` where it is at the time of writing
-set to 65kb) and also working on older kernel versions as `ExitBootServices()`
-is called much earlier in the boot process.
+kernel image (see `find_space()` in `src/patch-bzimage/generate_lds.py` where
+it is at the time of writing set to 65kb) and also working on older kernel
+versions as `ExitBootServices()` is called much earlier in the boot process.
 The primary disadvantage is that you have to do a runtime hook, and the path is
 separate from what the BIOS hook does.
 
