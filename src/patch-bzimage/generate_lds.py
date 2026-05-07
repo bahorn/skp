@@ -8,6 +8,9 @@ from consts import SYMBOLS, INITCALL, WANT, PCPU_OFFSET
 
 
 def find_blocks(data, min_size):
+    """
+    Searches data for a block containing enough continous 0xcc bytes.
+    """
     blocks = []
     i = len(data) - 1
     while i >= 0:
@@ -24,44 +27,32 @@ def find_blocks(data, min_size):
     return blocks
 
 
-def find_space(path, want):
-    fp = open(path, 'rb')
-    data = fp.read()
-
-    fp.seek(0)
-
-    f = ELFFile(fp)
-
-    text = f.get_section_by_name('.text')
-    start = text.header['sh_offset']
-    end = start + text.header['sh_size']
-
-    # now search from the end of .text for a large enough block of 0xcc
-
-    blocks = find_blocks(data[start:end], min_size=WANT)
-    if len(blocks) == 0:
-        raise Exception('FAILURE')
-
-    return start + blocks[0][0]
-
-
-def kallsyms_line_to_int(line):
-    v = line.strip().split(' ')[0]
-    return int(f'0x{v}', 16)
-
-
-class Kallsyms:
+class Kernel:
     """
-    Wrapper to look up symbols and return their address
+    Wrapper around the kernel image to allow getting the information we need for
+    the linker script.
     """
 
-    def __init__(self, path):
+    def __init__(self, kpath):
+        f = open(kpath, 'rb')
+        self._data = f.read()
+        f.seek(0)
+        self._elf = ELFFile(f)
+
+        symtab = self._elf.get_section_by_name('.symtab')
         self._syms = {}
-        for line in open(path, 'r'):
-            name = line.split(' ')[-1].strip()
-            if name not in self._syms:
-                self._syms[name] = []
-            self._syms[name].append(kallsyms_line_to_int(line))
+        # annoyingly slow, only have to do this so we can regex match on the
+        # initcall we want to hook.
+        for symbol in symtab.iter_symbols():
+            if symbol.name not in self._syms:
+                self._syms[symbol.name] = []
+            self._syms[symbol.name].append(symbol.entry.st_value)
+
+    def data(self):
+        return self._data
+
+    def elf(self):
+        return self._elf
 
     def syms(self):
         return self._syms.keys()
@@ -69,52 +60,60 @@ class Kallsyms:
     def get(self, symbol):
         return self._syms.get(symbol)
 
+    def find_space(self, want):
+        text = self._elf.get_section_by_name('.text')
+        start = text.header['sh_offset']
+        end = start + text.header['sh_size']
 
-def preempt_count(kallsyms):
-    res = kallsyms.get('__preempt_count')
-    if res is not None:
-        return res[0]
+        # now search from the end of .text for a large enough block of 0xcc
+        blocks = find_blocks(self._data[start:end], min_size=WANT)
+        if len(blocks) == 0:
+            raise Exception('FAILURE')
 
-    res = kallsyms.get('pcpu_hot')
-    if res is not None:
-        res = res[0]
-        res += PCPU_OFFSET
-        return res
+        return start + blocks[0][0]
 
-    raise Exception('finding preempt count failed')
+    def preempt_count(self):
+        res = self.get('__preempt_count')
+        if res is not None:
+            return res[0]
+
+        res = self.get('pcpu_hot')
+        if res is not None:
+            res = res[0]
+            res += PCPU_OFFSET
+            return res
+
+        raise Exception('finding preempt count failed')
+
+    def find_symbols(self, symbols):
+        text = None
+        sym_addr = {symbol: None for symbol in symbols}
+        sym_addr['_initcall_offset'] = None
+
+        initcall = re.compile(INITCALL)
+
+        text = self.get('_text')[0]
+        for symbol in symbols:
+            sym_addr[symbol] = self.get(symbol)
+            assert(len(sym_addr[symbol]) == 1)
+
+        for sym in self.syms():
+            if initcall.fullmatch(sym) is not None and \
+                    sym_addr['_initcall_offset'] is None:
+                sym_addr['_initcall_offset'] = self.get(sym)
+                assert(len(sym_addr['_initcall_offset']) == 1)
+
+        for symbol in sym_addr.keys():
+            sym_addr[symbol] = sym_addr[symbol][0]
+            sym_addr[symbol] -= text
+
+        return sym_addr
 
 
-def find_symbols(kallsyms, symbols):
-    text = None
-    sym_addr = {symbol: None for symbol in symbols}
-    sym_addr['_initcall_offset'] = None
-
-    initcall = re.compile(INITCALL)
-
-    text = kallsyms.get('_text')[0]
-    for symbol in symbols:
-        sym_addr[symbol] = kallsyms.get(symbol)
-        assert(len(sym_addr[symbol]) == 1)
-
-    for sym in kallsyms.syms():
-        if initcall.fullmatch(sym) is not None and \
-                sym_addr['_initcall_offset'] is None:
-            sym_addr['_initcall_offset'] = kallsyms.get(sym)
-            assert(len(sym_addr['_initcall_offset']) == 1)
-
-    for symbol in sym_addr.keys():
-        sym_addr[symbol] = sym_addr[symbol][0]
-        sym_addr[symbol] -= text
-
-    return sym_addr
-
-
-def generate_lds(kallsyms_path, unpacked_kernel_path, want=WANT):
-    kallsyms = Kallsyms(kallsyms_path)
+def generate_lds(kernel, want=WANT):
     res = {}
-    for k, v in find_symbols(kallsyms, SYMBOLS).items():
+    for k, v in kernel.find_symbols(SYMBOLS).items():
         res[k] = v
-
     # We use load_offset to set the address of the patch from the rest of the
     # kernel, which we store in spare space in the kernel.
     # So if we want to set a good value for this, we actually need to link the
@@ -127,9 +126,9 @@ def generate_lds(kallsyms_path, unpacked_kernel_path, want=WANT):
         res['_offset_dest'] = 0
         res['_offset_bios_entry'] = 0
     else:
-        res['load_offset'] = find_space(unpacked_kernel_path, want)
+        res['load_offset'] = kernel.find_space(want)
 
-    res['__preempt_count'] = preempt_count(kallsyms)
+    res['__preempt_count'] = kernel.preempt_count()
     return res
 
 

@@ -6,7 +6,7 @@ from the map file to get offsets.
 """
 import os
 import subprocess
-from generate_lds import generate_lds, wrap_lds
+from generate_lds import generate_lds, wrap_lds, Kernel
 from consts import WANT
 
 
@@ -43,14 +43,13 @@ def link(runtime, symbols, linker_script, payload):
 
 
 class BadLink:
-    def __init__(self, runtime, kallsyms, linker_script, unpacked_kernel,
+    def __init__(self, runtime, linker_script, unpacked_kernel,
                  payload=None):
         self._runtime = runtime
-        self._kallsyms = kallsyms
         self._linker_script = linker_script
-        self._unpacked_kernel = unpacked_kernel
+        self._unpacked_kernel = Kernel(unpacked_kernel)
         self._payload = payload
-        temp_symbols = generate_lds(kallsyms, unpacked_kernel, want=None)
+        temp_symbols = generate_lds(self._unpacked_kernel, want=None)
         test_link = link(runtime, temp_symbols, linker_script, payload)
         self._size = len(test_link[0])
         self._mapfile = test_link[1]
@@ -72,7 +71,7 @@ class BadLink:
         Return the data post linking
         """
         symbols = generate_lds(
-            self._kallsyms, self._unpacked_kernel,
+            self._unpacked_kernel,
             want=min(WANT, self._size)
         )
         for k, v in self._to_set.items():

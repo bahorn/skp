@@ -6,7 +6,7 @@ from add_data import add_data
 from badlink import BadLink
 from pe import PERemoveSig, PECheckSumFix
 from remove_reloc import remove_reloc
-from generate_lds import find_space, find_symbols, Kallsyms
+from generate_lds import Kernel
 from consts import WANT, SYMBOLS
 
 
@@ -34,7 +34,6 @@ def patch_kernel(args):
 
     badlink_payload = BadLink(
         args.runtime,
-        kallsyms=args.kallsyms,
         linker_script=linker_script,
         unpacked_kernel=args.unpacked_kernel,
         payload=args.payload,
@@ -61,12 +60,12 @@ def debug_kernel(args):
 
     Not for normal users!
     """
+    kernel = Kernel(args.unpacked_kernel)
     # We need to have space to find a basic test case if we have any chance of
     # this kernel being patchable.
-    print('space', find_space(args.unpacked_kernel, want=WANT))
+    print('space', kernel.find_space(want=WANT))
     # This broke on 7.0 when the memory layout changed, causes negative symbols.
-    kallsyms = Kallsyms(args.kallsyms)
-    for symbol, value in find_symbols(kallsyms, SYMBOLS).items():
+    for symbol, value in kernel.find_symbols(SYMBOLS).items():
         print('*', symbol, value, value < 0)
 
 
@@ -81,7 +80,6 @@ def main():
     patch = subparsers.add_parser('patch', help='Patch the kernel')
     patch.add_argument('source_kernel')
     patch.add_argument('unpacked_kernel')
-    patch.add_argument('kallsyms')
     patch.add_argument('runtime')
     patch.add_argument('linker_script')
     patch.add_argument('patched_kernel')
@@ -92,7 +90,6 @@ def main():
 
     debug = subparsers.add_parser('debug', help='Development debug info')
     debug.add_argument('unpacked_kernel')
-    debug.add_argument('kallsyms')
 
     args = parser.parse_args()
 
