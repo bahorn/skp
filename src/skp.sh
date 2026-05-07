@@ -9,7 +9,8 @@ echo $PAYLOAD
 
 source .venv/bin/activate
 
-# extract kallsyms
+# extract kallsyms - only extracting this for sanity, we read the symbols from
+# the unpacked elf.
 if [ ! -f $INTERMEDIATE/kallsyms ]; then
     uv run --project tools/vmlinux-to-elf kallsyms-finder $SOURCE_KERNEL > $INTERMEDIATE/kallsyms
 fi
@@ -28,7 +29,6 @@ echo $INTERMEDIATE
 python3 src/patch-bzimage patch \
     $SOURCE_KERNEL \
     $INTERMEDIATE/curr.elf \
-    $INTERMEDIATE/kallsyms \
     ./src/runtime/combined.o \
     ./src/runtime/linker.lds \
     $PATCHED_KERNEL \
