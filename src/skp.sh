@@ -18,7 +18,7 @@ fi
 # extract the kernel so we can find an offset to copy out payload to in the
 # kernel image.
 if [ ! -f $INTERMEDIATE/curr.elf ]; then
-    uv tool run tools/vmlinux-to-elf \
+    uv run --project tools/vmlinux-to-elf vmlinux-to-elf \
         $SOURCE_KERNEL \
         $INTERMEDIATE/curr.elf
 fi
