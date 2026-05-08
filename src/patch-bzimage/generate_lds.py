@@ -110,7 +110,7 @@ class Kernel:
         return sym_addr
 
 
-def generate_lds(kernel, want=WANT):
+def generate_lds(kernel, want=WANT, direct_patching=False):
     res = {}
     for k, v in kernel.find_symbols(SYMBOLS).items():
         res[k] = v
@@ -128,6 +128,7 @@ def generate_lds(kernel, want=WANT):
     else:
         res['load_offset'] = kernel.find_space(want)
 
+    res['_skip_direct_patching'] = int(direct_patching)
     res['__preempt_count'] = kernel.preempt_count()
     return res
 

@@ -16,6 +16,8 @@ EFI_PHYSICAL_ADDRESS LOAD_OFFSET = (EFI_PHYSICAL_ADDRESS)&load_offset;
 extern const uintptr_t _initcall_offset __attribute__((visibility("hidden")));
 EFI_PHYSICAL_ADDRESS initcall_offset = (EFI_PHYSICAL_ADDRESS)&_initcall_offset;
 
+extern const uintptr_t _skip_direct_patching __attribute__((visibility("hidden")));
+uint64_t skip_direct_patching = (uint64_t)&_skip_direct_patching;
 
 // Want it pre-initialized
 EFI_EXIT_BOOT_SERVICES orig_exitbootservices = \
@@ -41,7 +43,6 @@ void *memcpy(void *dest, const void *src, int n)
     return dest;
 }
 
-#ifdef DIRECT_PATCHING
 
 /* Check if this address is mapped, and a valid entrypoint */
 int check_address(void *addr, UINT64 pc)
@@ -132,7 +133,6 @@ int try_direct_patching()
     return res;
 }
 
-#endif
 
 void install_runtime_hook()
 {
@@ -175,12 +175,11 @@ EFI_STATUS exit_bootservices_hook(EFI_HANDLE ImageHandle, UINTN MapKey)
     }
     called = 1;
 
-#ifdef DIRECT_PATCHING
-    if (!try_direct_patching())
-        install_runtime_hook();
-#else
+    if (!skip_direct_patching) {
+        if (try_direct_patching())
+            goto done;
+    }
     install_runtime_hook();
-#endif
 
 done:
     EFI_STATUS ret = orig_exitbootservices(ImageHandle, MapKey);

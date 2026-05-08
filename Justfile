@@ -20,8 +20,8 @@ run_id := `uuidgen`
 # Extra flags to patch-bzimage, can disable uefi or bios patching with this.
 export EXTRA_PATCH := env("EXTRA_PATCH", "")
 
-# To enable / disable direct patching
-export EXTRA_STAGE2_DEFINE := env("EXTRA_STAGE2_DEFINE", "-DDIRECT_PATCHING")
+# Nothing currently
+export EXTRA_STAGE2_DEFINE := env("EXTRA_STAGE2_DEFINE", "")
 
 # List Commands
 [group('Listing')]
