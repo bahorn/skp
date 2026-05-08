@@ -37,6 +37,7 @@ def patch_kernel(args):
         linker_script=linker_script,
         unpacked_kernel=args.unpacked_kernel,
         payload=args.payload,
+        direct_patching=not args.no_uefi_direct
     )
     a = add_data(
         a,
@@ -86,7 +87,7 @@ def main():
     patch.add_argument('--payload', default=None)
     patch.add_argument('--no-bios', action='store_false')
     patch.add_argument('--no-uefi', action='store_false')
-
+    patch.add_argument('--no-uefi-direct', action='store_false')
 
     debug = subparsers.add_parser('debug', help='Development debug info')
     debug.add_argument('unpacked_kernel')

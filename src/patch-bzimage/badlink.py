@@ -44,12 +44,14 @@ def link(runtime, symbols, linker_script, payload):
 
 class BadLink:
     def __init__(self, runtime, linker_script, unpacked_kernel,
-                 payload=None):
+                 direct_patching=False, payload=None):
         self._runtime = runtime
         self._linker_script = linker_script
         self._unpacked_kernel = Kernel(unpacked_kernel)
         self._payload = payload
-        temp_symbols = generate_lds(self._unpacked_kernel, want=None)
+        self._direct_patching = direct_patching
+        temp_symbols = generate_lds(self._unpacked_kernel, want=None,
+                                    direct_patching=self._direct_patching)
         test_link = link(runtime, temp_symbols, linker_script, payload)
         self._size = len(test_link[0])
         self._mapfile = test_link[1]
@@ -72,7 +74,8 @@ class BadLink:
         """
         symbols = generate_lds(
             self._unpacked_kernel,
-            want=min(WANT, self._size)
+            want=min(WANT, self._size),
+            direct_patching=self._direct_patching
         )
         for k, v in self._to_set.items():
             symbols[k] = v
