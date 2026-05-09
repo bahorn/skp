@@ -3,6 +3,7 @@ Generate a partial linker script defining symbols we need to include to link
 the runtime.
 """
 import re
+import struct
 from elftools.elf.elffile import ELFFile
 from consts import SYMBOLS, INITCALL, WANT, PCPU_OFFSET
 
@@ -60,6 +61,18 @@ class Kernel:
     def get(self, symbol):
         return self._syms.get(symbol)
 
+    def get_value(self, address):
+        for segment in self._elf.iter_segments():
+            if segment['p_type'] != 'PT_LOAD':
+                continue
+            size = segment['p_memsz']
+            vaddr = segment['p_vaddr']
+            if not (vaddr <= address and address <= vaddr + size + 8):
+                continue
+            offset = address - vaddr
+            return struct.unpack('<Q', segment.data()[offset:offset+8])[0]
+        return 0
+
     def find_space(self, want):
         text = self._elf.get_section_by_name('.text')
         start = text.header['sh_offset']
@@ -114,6 +127,14 @@ def generate_lds(kernel, want=WANT, direct_patching=False):
     res = {}
     for k, v in kernel.find_symbols(SYMBOLS).items():
         res[k] = v
+    # the address / value we just to determine if this is the kernel mapping in
+    # the uefi bootservices hook
+    # using a slight offset so we don't just hit endbr4 instructions / standard
+    # filler at the start of a function.
+    check_address = kernel.get('kallsyms_lookup_name')[0] + 33
+    res['_check_value'] = kernel.get_value(check_address)
+    res['_check_value_offset'] = check_address - kernel.get('_text')[0]
+
     # We use load_offset to set the address of the patch from the rest of the
     # kernel, which we store in spare space in the kernel.
     # So if we want to set a good value for this, we actually need to link the
