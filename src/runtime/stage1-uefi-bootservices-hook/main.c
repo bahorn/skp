@@ -6,6 +6,8 @@
 #include <efilib.h>
 #include "../stage2/export.h"
 
+#define PAGE_SIZE 4096
+
 
 void _stage1_main(EFI_HANDLE ImageHandle, EFI_SYSTEM_TABLE *SystemTable);
 
@@ -17,7 +19,14 @@ extern const uintptr_t _initcall_offset __attribute__((visibility("hidden")));
 EFI_PHYSICAL_ADDRESS initcall_offset = (EFI_PHYSICAL_ADDRESS)&_initcall_offset;
 
 extern const uintptr_t _skip_direct_patching __attribute__((visibility("hidden")));
-uint64_t skip_direct_patching = (uint64_t)&_skip_direct_patching;
+UINT64 skip_direct_patching = (UINT64)&_skip_direct_patching;
+
+extern const uintptr_t _check_value __attribute__((visibility("hidden")));
+UINT64 check_value = (UINT64)&_check_value;
+
+extern const uintptr_t _check_value_offset __attribute__((visibility("hidden")));
+UINT64 check_value_offset = (UINT64)&_check_value_offset;
+
 
 // Want it pre-initialized
 EFI_EXIT_BOOT_SERVICES orig_exitbootservices = \
@@ -25,12 +34,6 @@ EFI_EXIT_BOOT_SERVICES orig_exitbootservices = \
 EFI_SYSTEM_TABLE *systable = (EFI_SYSTEM_TABLE *) 0x41424344;
 EFI_BOOT_SERVICES *bootservices = (EFI_BOOT_SERVICES *) 0x41424344;
 int called = 0;
-
-
-int compare(char a, char b)
-{
-    return a == b;
-}
 
 
 void *memcpy(void *dest, const void *src, int n)
@@ -44,20 +47,16 @@ void *memcpy(void *dest, const void *src, int n)
 }
 
 
-/* Check if this address is mapped, and a valid entrypoint */
+/* Check if this mapping is what we are looking for */
 int check_address(void *addr, UINT64 pc)
 {
-    char *to_test = addr;
-    // Some fixed values we know from startup_32
-    if (!compare(to_test[0], 0xfc)) {
-        return 0;
-    }
+    UINT64 *to_test = addr + check_value_offset;
 
-    if (!compare(to_test[1], 0x0f)) {
-        return 0;
-    }
+    // extra page just to ensure we don't go OOB
+    if (((pc + 1) * PAGE_SIZE) < check_value_offset) return 1;
 
-    return 1;
+    // check against a constant that should be at this offset.
+    return (*to_test == check_value);
 }
 
 /* Apply our kernel patches */
