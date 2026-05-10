@@ -151,14 +151,15 @@ void install_runtime_hook()
     memcpy(data, runtime_bin, runtime_bin_len);
     /* Copy a few pointers */
     /* -> The function we are hooking */
-    memcpy(data, (void *) &(systable->RuntimeServices->GetVariable), 8);
+    memcpy(data, (void *) &(systable->RuntimeServices->GetNextVariableName), 8);
 
     /* -> Address of the field in the struct we replace */
-    UINT64 a = (UINT64) &(systable->RuntimeServices->GetVariable);
+    UINT64 a = (UINT64) &(systable->RuntimeServices->GetNextVariableName);
     memcpy(data+8, (void *) &(a), 8);
 
     /* And hook! */
-    systable->RuntimeServices->GetVariable = (EFI_GET_VARIABLE) data + 16;
+    systable->RuntimeServices->GetNextVariableName = \
+        (EFI_GET_NEXT_VARIABLE_NAME) data + 16;
 }
 
 
