@@ -6,6 +6,7 @@ rootfs := env("ROOTFS", BASEDIR / "samples/rootfs/openwrt-rootfs.img")
 patched_kernel := env("PATCHED_KERNEL", BASEDIR / "samples/patched-kernel.bzimage")
 grub_root := env("GRUB_ROOT", BASEDIR / "samples/grub-root")
 config_dir := BASEDIR / "configs"
+default_payload := BASEDIR / "tools/klude2/samples/nop"
 # Having the debuging features here so it can be easily turned off in the
 # testing scripts, allowing them to be parallel.
 extra_qemu := "-monitor tcp:127.0.0.1:55555,server,nowait" + \
@@ -33,6 +34,7 @@ default:
 setup:
     virtualenv -p python3 .venv
     ./tools/setup.sh
+    just -f ./tools/klude2/ custom custom
 
 # Run a Kernel via UEFI with OVMF
 [group('run')]
@@ -113,12 +115,21 @@ patch-kernel kernel=env("SOURCE_KERNEL") output=patched_kernel payload=env("PAYL
     # linked later on.
     {{ if skip_build_runtime != "true" { "make -C ./src/runtime" } else { "" } }}
 
-
     ./src/skp.sh \
         {{kernel}} \
         {{INTERMEDIATE}}/`./tools/shasum.sh {{kernel}}` \
         {{output}} \
         {{ if payload != "" { "--payload=" + payload } else { "" } }}
+
+# Patch a kernel based on the source tree provide, and build a payload for it from source.
+[group('build')]
+patch-with-payload path payload=default_payload:
+    make -C ./src/runtime
+    # using realpath to take relative paths!
+    just -f ./tools/klude2/Justfile build-path \
+        `realpath {{path}}` `realpath {{payload}}`
+    just patch-kernel {{path}}/arch/x86/boot/bzImage {{patched_kernel}} \
+        ./tools/klude2/artifacts/payload.o
 
 # Download OpenWRTs rootfs
 [group('setup')]
@@ -153,18 +164,27 @@ clean:
     -rm {{patched_kernel}}
     -rm -r {{grub_root}}
 
-# Test a list of kernels
+# Test a list of kernels. This does not rebuild the payload for the given kernel.
 [group('testing')]
 test-batch test_kernel_list payload=env("PAYLOAD", ""):
     make -C ./src/runtime
     cat {{test_kernel_list}} | \
         parallel -j 4 -I HERE ./tools/testing/test-batch.sh HERE {{payload}}
 
+# End to end testing of a kernel tree, building the payload from source.
+[group('testing')]
+end-to-end path payload=default_payload:
+    make -C ./src/runtime
+    # using realpath to take relative paths!
+    just -f ./tools/klude2/Justfile build-path \
+        `realpath {{path}}` `realpath {{payload}}`
+    ./tools/testing/test-batch.sh \
+        {{path}}/arch/x86/boot/bzImage ./tools/klude2/artifacts/payload.o
+
 # Connect to the GDB server
 [group('run')]
 gdb:
     gdb -ex "target remote localhost:1234"
-
 
 [group('dev')]
 lint:
