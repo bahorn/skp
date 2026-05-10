@@ -251,18 +251,10 @@ void run_elf(void *elf, size_t len)
     run_tha_fun(start);
 }
 
-/* Takes just the address of the _text section */
-__attribute__ ((section(".text.start")))
-int _kshelf_loader(unsigned long text, int via_initcall)
+/* Resolve the required symbols for run_elf() */
+bool resolve_required(void)
 {
-    int res = 0;
-    // have to relocate it
-    LOOKUP_RAW(kallsyms_lookup_name_, (text + (void *)kallsyms_lookup_name_));
-    LOOKUP(_printk);
     LOOKUP(vmalloc);
-
-    PRINTK("PATCHED KERNEL\n");
-
     /* vmalloc became a macro in 6.10, so working around that. */
     if (vmalloc == NULL) {
         // skips any alloc hooks.
@@ -271,27 +263,60 @@ int _kshelf_loader(unsigned long text, int via_initcall)
 
     LOOKUP(set_memory_ro);
     LOOKUP(set_memory_x);
-
     if (vmalloc == NULL || set_memory_ro == NULL || set_memory_x == NULL) {
         PRINTK("Can't get Symbol?\n");
-        return res;
+        return false;
     }
 
-    /* If we are called via a patched initcall, we need to call it back */
-    if (via_initcall) {
-        PRINTK("Called via initcall\n");
-        LOOKUP(regulator_init_complete);
-        res = regulator_init_complete();
-    } else {
-        PRINTK("Called via UEFI Runtime hook\n");
-    }
+    return true;
+}
 
-    PRINTK("payload_len: %i\n", payload_len);
-    if (payload_len > 0) {
-        PRINTK("Running payload\n");
-        run_elf(payload, payload_len);
-    } else {
+void run_payload(void)
+{
+    if (payload_len <= 0) {
         PRINTK("No payload defined\n");
+        return;
     }
+    PRINTK("Running payload\n");
+
+    if (!resolve_required()) {
+        PRINTK("Can't get Symbols needed.\n");
+        return;
+    }
+
+    run_elf(payload, payload_len);
+}
+
+int via_initcall_handler(void)
+{
+    int res = 0;
+    PRINTK("Called via initcall\n");
+    LOOKUP(regulator_init_complete);
+    res = regulator_init_complete();
+
+    run_payload();
     return res;
+}
+
+int via_uefi_runtime(void)
+{
+    PRINTK("Called via UEFI Runtime hook\n");
+    run_payload();
+    return 0;
+}
+
+/* Takes just the address of the _text section */
+__attribute__ ((section(".text.start")))
+int _kshelf_loader(unsigned long text, int via_initcall)
+{
+    LOOKUP_RAW(kallsyms_lookup_name_, (text + (void *)kallsyms_lookup_name_));
+    LOOKUP(_printk);
+    PRINTK("PATCHED KERNEL\n");
+    PRINTK("payload_len: %i\n", payload_len);
+
+    if (via_initcall) {
+        return via_initcall_handler();
+    }
+
+    return via_uefi_runtime();
 }
