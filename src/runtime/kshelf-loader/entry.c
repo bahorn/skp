@@ -5,13 +5,14 @@
 
 #define PAGE_SIZE 4096
 
+#define LOOKUP(SYM) SYM = (SYM ## _t) kallsyms_lookup_name_(#SYM)
+
 typedef unsigned long (*kallsyms_lookup_name_t)(const char *name);
 typedef int (*_printk_t)(const char *fmt, ...);
 typedef void *(*vmalloc_t)(unsigned long size);
 typedef int *(*set_memory_x_t)(unsigned long addr, int numpages);
 typedef int *(*set_memory_ro_t)(unsigned long addr, int numpages);
 typedef int (*regulator_init_complete_t)(void);
-
 
 extern const uintptr_t kallsyms_lookup_name \
     __attribute__((visibility("hidden")));
@@ -67,7 +68,6 @@ void *memset(void *s, int c, size_t n)
     }
     return s;
 }
-
 
 /* Maps a size to the number of pages */
 size_t get_n_pages(size_t n)
@@ -179,7 +179,6 @@ dt_end:
     return true;
 }
 
-
 /* Compute the size we actually need */
 size_t get_virtualsize(void *elf)
 {
@@ -254,13 +253,14 @@ void run_elf(void *elf, size_t len)
 
 /* Takes just the address of the _text section */
 __attribute__ ((section(".text.start")))
-void _kshelf_loader(unsigned long text, int via_initcall)
+int _kshelf_loader(unsigned long text, int via_initcall)
 {
+    int res = 0;
     // have to relocate it
     kallsyms_lookup_name_ = \
         (kallsyms_lookup_name_t) (text + (void *)kallsyms_lookup_name_);
-    _printk = (_printk_t) kallsyms_lookup_name_("_printk");
-    vmalloc = (vmalloc_t) kallsyms_lookup_name_("vmalloc");
+    LOOKUP(_printk);
+    LOOKUP(vmalloc);
 
     PRINTK("PATCHED KERNEL\n");
 
@@ -270,12 +270,12 @@ void _kshelf_loader(unsigned long text, int via_initcall)
         vmalloc = (vmalloc_t) kallsyms_lookup_name_("vmalloc_noprof");
     }
 
-    set_memory_ro = (set_memory_ro_t) kallsyms_lookup_name_("set_memory_ro");
-    set_memory_x = (set_memory_x_t) kallsyms_lookup_name_("set_memory_x");
+    LOOKUP(set_memory_ro);
+    LOOKUP(set_memory_x);
 
     if (vmalloc == NULL || set_memory_ro == NULL || set_memory_x == NULL) {
         PRINTK("Can't get Symbol?\n");
-        return;
+        return res;
     }
 
     /* If we are called via a patched initcall, we need to call it back */
@@ -284,7 +284,7 @@ void _kshelf_loader(unsigned long text, int via_initcall)
         regulator_init_complete = 
             (regulator_init_complete_t) kallsyms_lookup_name_(
                     "regulator_init_complete");
-        regulator_init_complete();
+        res = regulator_init_complete();
     } else {
         PRINTK("Called via UEFI Runtime hook\n");
     }
@@ -296,5 +296,5 @@ void _kshelf_loader(unsigned long text, int via_initcall)
     } else {
         PRINTK("No payload defined\n");
     }
-    return;
+    return res;
 }
