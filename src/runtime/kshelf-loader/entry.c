@@ -5,25 +5,26 @@
 
 #define PAGE_SIZE 4096
 
+#define DEFSYM(SYM, RETTYPE, ARGS) \
+        typedef RETTYPE (* SYM ## _t)ARGS; \
+        SYM ## _t SYM
+
+#define LOOKUP_RAW(SYM, VALUE) SYM = (SYM ## _t) VALUE
 #define LOOKUP(SYM) SYM = (SYM ## _t) kallsyms_lookup_name_(#SYM)
+#define LOOKUP_ALT(SYM, ALT) SYM = (SYM ## _t) kallsyms_lookup_name_(#ALT)
 
-typedef unsigned long (*kallsyms_lookup_name_t)(const char *name);
-typedef int (*_printk_t)(const char *fmt, ...);
-typedef void *(*vmalloc_t)(unsigned long size);
-typedef int *(*set_memory_x_t)(unsigned long addr, int numpages);
-typedef int *(*set_memory_ro_t)(unsigned long addr, int numpages);
-typedef int (*regulator_init_complete_t)(void);
-
+// We have to handle this a bit differently as the offset is passed in via the
+// linker step.
 extern const uintptr_t kallsyms_lookup_name \
     __attribute__((visibility("hidden")));
-kallsyms_lookup_name_t kallsyms_lookup_name_ = \
-    (kallsyms_lookup_name_t) &kallsyms_lookup_name;
 
-_printk_t _printk;
-vmalloc_t vmalloc;
-set_memory_x_t set_memory_x;
-set_memory_ro_t set_memory_ro;
-regulator_init_complete_t regulator_init_complete;
+DEFSYM(kallsyms_lookup_name_, unsigned long, (const char *name)) = \
+    (kallsyms_lookup_name__t) &kallsyms_lookup_name;
+DEFSYM(_printk, int, (const char *fmt, ...));
+DEFSYM(vmalloc, void *, (unsigned long size));
+DEFSYM(set_memory_x, int *, (unsigned long addr, int numpages));
+DEFSYM(set_memory_ro, int *, (unsigned long addr, int numpages));
+DEFSYM(regulator_init_complete, int, (void));
 
 size_t get_n_pages(size_t n);
 bool do_relocs(void *elf);
@@ -31,7 +32,6 @@ int strcmp(const char *s1, const char *s2);
 
 __attribute__((weak)) unsigned char payload[0];
 __attribute__((weak, section(".data"))) unsigned int payload_len = 0;
-
 
 // #define PRINTK(...) ((void)0)
 #define PRINTK(...) _printk(__VA_ARGS__)
@@ -257,8 +257,7 @@ int _kshelf_loader(unsigned long text, int via_initcall)
 {
     int res = 0;
     // have to relocate it
-    kallsyms_lookup_name_ = \
-        (kallsyms_lookup_name_t) (text + (void *)kallsyms_lookup_name_);
+    LOOKUP_RAW(kallsyms_lookup_name_, (text + (void *)kallsyms_lookup_name_));
     LOOKUP(_printk);
     LOOKUP(vmalloc);
 
@@ -267,7 +266,7 @@ int _kshelf_loader(unsigned long text, int via_initcall)
     /* vmalloc became a macro in 6.10, so working around that. */
     if (vmalloc == NULL) {
         // skips any alloc hooks.
-        vmalloc = (vmalloc_t) kallsyms_lookup_name_("vmalloc_noprof");
+        LOOKUP_ALT(vmalloc, vmalloc_noprof);
     }
 
     LOOKUP(set_memory_ro);
@@ -281,9 +280,7 @@ int _kshelf_loader(unsigned long text, int via_initcall)
     /* If we are called via a patched initcall, we need to call it back */
     if (via_initcall) {
         PRINTK("Called via initcall\n");
-        regulator_init_complete = 
-            (regulator_init_complete_t) kallsyms_lookup_name_(
-                    "regulator_init_complete");
+        LOOKUP(regulator_init_complete);
         res = regulator_init_complete();
     } else {
         PRINTK("Called via UEFI Runtime hook\n");
