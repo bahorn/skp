@@ -36,30 +36,32 @@ Help:
 ```
 Available recipes:
     [Listing]
-    default       # List Commands
+    default                                         # List Commands
 
     [build]
-    clean         # Clean the Project
+    clean                                           # Clean the Project
     patch-kernel kernel=env("SOURCE_KERNEL") output=patched_kernel payload=env("PAYLOAD", "") # Patch a kernel
+    patch-with-payload path payload=default_payload # Patch a kernel based on the source tree provide, and build a payload for it from source.
 
     [dev]
     lint
 
     [run]
-    gdb           # Connect to the GDB server
-    run-bios      # Run a Kernel via BIOS
-    run-grub-bios # Run the kernel via a BIOS grub rescue images - *Can not be ran in parallel!*
-    run-grub-uefi # Run the Kernel via UEFI GRUB -  *Can not be ran in parallel!*
-    run-uefi      # Run a Kernel via UEFI with OVMF
+    gdb                                             # Connect to the GDB server
+    run-bios                                        # Run a Kernel via BIOS
+    run-grub-bios                                   # Run the kernel via a BIOS grub rescue images - *Can not be ran in parallel!*
+    run-grub-uefi                                   # Run the Kernel via UEFI GRUB -  *Can not be ran in parallel!*
+    run-uefi                                        # Run a Kernel via UEFI with OVMF
 
     [setup]
     easylkb version kconfig=(BASEDIR / "configs/test.KConfig") extra="" # Use easylkb to build a kernel
-    get-grub-uefi # Download the Ubuntu's UEFI build of GRUB
-    get-rootfs    # Download OpenWRTs rootfs
-    setup         # Install dependencies to build the project
+    get-grub-uefi                                   # Download the Ubuntu's UEFI build of GRUB
+    get-rootfs                                      # Download OpenWRTs rootfs
+    setup                                           # Install dependencies to build the project
 
     [testing]
-    test-batch test_kernel_list payload=env("PAYLOAD", "") # Test a list of kernels
+    end-to-end path payload=default_payload         # End to end testing of a kernel tree, building the payload from source.
+    test-batch test_kernel_list payload=env("PAYLOAD", "") # Test a list of kernels. This does not rebuild the payload for the given kernel.
 ```
 
 To setup the virtualenv and dependencies:
@@ -131,6 +133,12 @@ An example list of kernels looks like:
 ./tools/easylkb/kernel/linux-6.10/arch/x86/boot/bzImage
 ./tools/easylkb/kernel/linux-6.9/arch/x86/boot/bzImage
 ./tools/easylkb/kernel/linux-6.0/arch/x86/boot/bzImage
+```
+
+If you want to test a given kernel tree with a specific payload, try something
+like this:
+```
+just end-to-end ./tools/easylkb/kernel/linux-6.8/ ./tools/klude2/samples/nop
 ```
 
 ### Debugging
