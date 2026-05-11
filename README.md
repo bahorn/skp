@@ -5,9 +5,7 @@ This is a modern version of the idea from Phrack 60-8 [1], but doing a very
 different style of patches.
 
 Supports 5.15+ for both UEFI and BIOS, tested up to 6.19.
-Stable up to 6.17, ongoing work on the UEFI path in 6.18/6.19 (requires a tiny
-patch).
-7.0 is in-progress and not yet supported.
+7.0 partly works, but requires changes to klude2 and vmlinux-to-elf to work.
 
 Primarily tested with kernel images from Ubuntu, and my testing KConfig is
 derived from the default Ubuntu configuration.
@@ -20,6 +18,9 @@ The payloads can be compiled with
 `tools/klude2/src/sample` to change what it does.
 All kernel symbols are supported, and they can work across kernel versions but
 you are better off building the payload for your specific kernel.
+There is a roughly 128KB space limitation for your payload, depending on method.
+Some ways around that depending on kernel / boot method, but this is the general
+limit.
 
 I have set this up to not need you to provide a payload, as the default
 behaviour is just to print some info during the kernels boot.
@@ -34,6 +35,7 @@ You will need to install the [`just` command runner](https://just.systems).
 
 Help:
 ```
+just --list
 Available recipes:
     [Listing]
     default                                         # List Commands
@@ -61,6 +63,7 @@ Available recipes:
 
     [testing]
     end-to-end path payload=default_payload         # End to end testing of a kernel tree, building the payload from source.
+    end-to-end-batch test_kernel_list payload=default_payload
     test-batch test_kernel_list payload=env("PAYLOAD", "") # Test a list of kernels. This does not rebuild the payload for the given kernel.
 ```
 

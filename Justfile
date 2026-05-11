@@ -174,12 +174,18 @@ test-batch test_kernel_list payload=env("PAYLOAD", ""):
 # End to end testing of a kernel tree, building the payload from source.
 [group('testing')]
 end-to-end path payload=default_payload:
-    make -C ./src/runtime
+    {{ if skip_build_runtime != "true" { "make -C ./src/runtime" } else { "" } }}
     # using realpath to take relative paths!
     just -f ./tools/klude2/Justfile build-path \
         `realpath {{path}}` `realpath {{payload}}`
     ./tools/testing/test-batch.sh \
         {{path}}/arch/x86/boot/bzImage ./tools/klude2/artifacts/payload.o
+
+[group('testing')]
+end-to-end-batch test_kernel_list payload=default_payload:
+    make -C ./src/runtime
+    cat {{test_kernel_list}} | \
+        xargs -I HERE just --set skip_build_runtime true end-to-end HERE {{ payload }}
 
 # Connect to the GDB server
 [group('run')]
