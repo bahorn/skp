@@ -1,9 +1,12 @@
-/* Our runtime hook */
+/* The kSHELF loader, running in a few contexts. */
 #include <elf.h>
 #include <stddef.h>
 #include <stdbool.h>
 
 #define PAGE_SIZE 4096
+// 0x200 is unused in recent kernels, but nothing complains if you set it.
+// so we can support all the kernels by just doing this.
+#define GFP_ATOMIC 0x800 | 0x200 | 0x20
 
 #define DEFSYM(SYM, RETTYPE, ARGS) \
         typedef RETTYPE (* SYM ## _t)ARGS; \
@@ -21,7 +24,7 @@ extern const uintptr_t kallsyms_lookup_name \
 DEFSYM(kallsyms_lookup_name_, unsigned long, (const char *name)) = \
     (kallsyms_lookup_name__t) &kallsyms_lookup_name;
 DEFSYM(_printk, int, (const char *fmt, ...));
-DEFSYM(vmalloc, void *, (unsigned long size));
+DEFSYM(kmalloc, void *, (unsigned long size, unsigned int));
 DEFSYM(set_memory_x, int *, (unsigned long addr, int numpages));
 DEFSYM(set_memory_ro, int *, (unsigned long addr, int numpages));
 DEFSYM(regulator_init_complete, int, (void));
@@ -31,7 +34,7 @@ bool do_relocs(void *elf);
 int strcmp(const char *s1, const char *s2);
 
 typedef void (*start_t)(void);
-start_t start;
+start_t start = NULL;
 
 __attribute__((weak)) unsigned char payload[0];
 __attribute__((weak, section(".data"))) unsigned int payload_len = 0;
@@ -201,7 +204,14 @@ void setup_elf(void *elf, size_t len)
     Elf64_Ehdr *ehdr; 
     Elf64_Phdr *phdr;
     size_t size = get_virtualsize(elf);
-    void *body = vmalloc(size);
+    /* we *should* get a page aligned allocation:
+    > The address of a chunk allocated with kmalloc is aligned to at least
+    > ARCH_KMALLOC_MINALIGN bytes. For sizes which are a power of two, the
+    > alignment is also guaranteed to be at least the respective size. For
+    > other sizes, the alignment is guaranteed to be at least the largest
+    > power-of-two divisor of the size.
+    */
+    void *body = kmalloc(size, GFP_ATOMIC);
     /* First copy the ELF to a new location */
     memset(body, 0, size);
     memcpy(body, elf, len);
@@ -247,17 +257,22 @@ void setup_elf(void *elf, size_t len)
 /* Resolve the required symbols for run_elf() */
 bool resolve_required(void)
 {
-    LOOKUP(vmalloc);
-    /* vmalloc became a macro in 6.10, so working around that. */
-    if (vmalloc == NULL) {
-        // skips any alloc hooks.
-        LOOKUP_ALT(vmalloc, vmalloc_noprof);
+    LOOKUP(kmalloc);
+    // one of these SHOULD work...
+    if (kmalloc == NULL) {
+        LOOKUP_ALT(kmalloc, __kmalloc);
+    }
+    if (kmalloc == NULL) {
+        // unlikely to be the case, as this is primary an inline function.
+        LOOKUP_ALT(kmalloc, kmalloc_noprof);
+    }
+    if (kmalloc == NULL) {
+        LOOKUP_ALT(kmalloc, __kmalloc_noprof);
     }
 
     LOOKUP(set_memory_ro);
     LOOKUP(set_memory_x);
-    if (vmalloc == NULL || set_memory_ro == NULL || set_memory_x == NULL) {
-        PRINTK("Can't get Symbol?\n");
+    if (kmalloc == NULL || set_memory_ro == NULL || set_memory_x == NULL) {
         return false;
     }
 
@@ -282,6 +297,7 @@ void setup_payload(void)
 
 void run_payload(void)
 {
+    if (start == NULL) return;
     PRINTK("Running payload\n");
     start();
 }
@@ -298,6 +314,8 @@ int via_initcall_handler(void)
     return res;
 }
 
+/* the UEFI runtime hook runs in an interupt context, which makes several things
+ * more complex. */
 int via_uefi_runtime(void)
 {
     PRINTK("Called via UEFI Runtime hook\n");
