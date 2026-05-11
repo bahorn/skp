@@ -125,11 +125,15 @@ patch-kernel kernel=env("SOURCE_KERNEL") output=patched_kernel payload=env("PAYL
 [group('build')]
 patch-with-payload path payload=default_payload:
     make -C ./src/runtime
+    just -f ./tools/klude2/Justfile clean
     # using realpath to take relative paths!
     just -f ./tools/klude2/Justfile build-path \
         `realpath {{path}}` `realpath {{payload}}`
+    shasum ./tools/klude2/artifacts/pl.o
+    readelf -a ./tools/klude2/artifacts/pl.o
     just patch-kernel {{path}}/arch/x86/boot/bzImage {{patched_kernel}} \
-        ./tools/klude2/artifacts/payload.o
+        ./tools/klude2/artifacts/pl.o
+    shasum ./tools/klude2/artifacts/pl.o
 
 # Download OpenWRTs rootfs
 [group('setup')]
@@ -176,10 +180,11 @@ test-batch test_kernel_list payload=env("PAYLOAD", ""):
 end-to-end path payload=default_payload:
     {{ if skip_build_runtime != "true" { "make -C ./src/runtime" } else { "" } }}
     # using realpath to take relative paths!
+    just -f ./tools/klude2/Justfile clean
     just -f ./tools/klude2/Justfile build-path \
         `realpath {{path}}` `realpath {{payload}}`
     ./tools/testing/test-batch.sh \
-        {{path}}/arch/x86/boot/bzImage ./tools/klude2/artifacts/payload.o
+        {{path}}/arch/x86/boot/bzImage ./tools/klude2/artifacts/pl.o
 
 [group('testing')]
 end-to-end-batch test_kernel_list payload=default_payload:
