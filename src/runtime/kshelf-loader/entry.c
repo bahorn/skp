@@ -30,6 +30,9 @@ size_t get_n_pages(size_t n);
 bool do_relocs(void *elf);
 int strcmp(const char *s1, const char *s2);
 
+typedef void (*start_t)(void);
+start_t start;
+
 __attribute__((weak)) unsigned char payload[0];
 __attribute__((weak, section(".data"))) unsigned int payload_len = 0;
 
@@ -192,16 +195,9 @@ size_t get_virtualsize(void *elf)
     return res;
 }
 
-void run_tha_fun(void (*fun)(void))
-{
-    fun();
-}
-
 /* process */
-void run_elf(void *elf, size_t len)
+void setup_elf(void *elf, size_t len)
 {
-    typedef void (*start_t)(void);
-    start_t start;
     Elf64_Ehdr *ehdr; 
     Elf64_Phdr *phdr;
     size_t size = get_virtualsize(elf);
@@ -243,12 +239,9 @@ void run_elf(void *elf, size_t len)
         }
     }
 
-
     /* Transfer control */
     PRINTK("Entrypoint: %lx\n", body + ehdr->e_entry);
     start = (start_t)(body + ehdr->e_entry);
-
-    run_tha_fun(start);
 }
 
 /* Resolve the required symbols for run_elf() */
@@ -271,20 +264,26 @@ bool resolve_required(void)
     return true;
 }
 
-void run_payload(void)
+void setup_payload(void)
 {
     if (payload_len <= 0) {
         PRINTK("No payload defined\n");
         return;
     }
-    PRINTK("Running payload\n");
+    PRINTK("Loading payload\n");
 
     if (!resolve_required()) {
         PRINTK("Can't get Symbols needed.\n");
         return;
     }
 
-    run_elf(payload, payload_len);
+    setup_elf(payload, payload_len);
+}
+
+void run_payload(void)
+{
+    PRINTK("Running payload\n");
+    start();
 }
 
 int via_initcall_handler(void)
@@ -294,6 +293,7 @@ int via_initcall_handler(void)
     LOOKUP(regulator_init_complete);
     res = regulator_init_complete();
 
+    setup_payload();
     run_payload();
     return res;
 }
@@ -301,6 +301,7 @@ int via_initcall_handler(void)
 int via_uefi_runtime(void)
 {
     PRINTK("Called via UEFI Runtime hook\n");
+    setup_payload();
     run_payload();
     return 0;
 }
