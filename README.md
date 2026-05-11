@@ -144,6 +144,13 @@ like this:
 just end-to-end ./tools/easylkb/kernel/linux-6.8/ ./tools/klude2/samples/nop
 ```
 
+Or a batch with your specific payload:
+```
+just end-to-end-batch ./configs/test-kernels-path.list ./tools/klude2/samples/nop
+```
+
+(requires the paths to the kernel trees, not the bzImage).
+
 ### Debugging
 
 There a few common things that break between kernel versions:
@@ -246,15 +253,16 @@ This hook can do one of two things:
   kernels.
 
 The runtime hook has some advantages in terms of it allowing the use of payloads
-of arbitary sizes, while the direct patch only allows ~1MB, depending on the
+of larger sizes, while the direct patch only allows ~1MB, depending on the
 kernel image (see `find_space()` in `src/patch-bzimage/generate_lds.py` where
 it is at the time of writing set to 65kb) and also working on older kernel
 versions as `ExitBootServices()` is called much earlier in the boot process.
 The primary disadvantage is that you have to do a runtime hook, and the path is
-separate from what the BIOS hook does.
+separate from what the BIOS hook does, which is more unstable as it runs in a
+weirder context (half interrupt/half normal).
 
-The runtime hook is probably what you should use in most cases however.
-You can force it to be always used by unseting `DIRECT_PATCHING` in the envvar.
+The direct patch is probably what you should use in most cases however, but you
+can disable it by running skp with `EXTRA_PATCH=--no-uefi-direct`.
 
 This hook then runs the kSHELF loader and gets the module going.
 
