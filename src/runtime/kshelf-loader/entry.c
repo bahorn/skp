@@ -28,6 +28,11 @@ DEFSYM(kmalloc, void *, (unsigned long size, unsigned int));
 DEFSYM(set_memory_x, int *, (unsigned long addr, int numpages));
 DEFSYM(set_memory_ro, int *, (unsigned long addr, int numpages));
 DEFSYM(regulator_init_complete, int, (void));
+DEFSYM(execute_in_process_context, bool, (void *wq, void *work));
+DEFSYM(irq_enter_rcu, void, (void));
+DEFSYM(irq_exit_rcu, void, (void));
+
+void *wq = NULL;
 
 size_t get_n_pages(size_t n);
 bool do_relocs(void *elf);
@@ -318,9 +323,36 @@ int via_initcall_handler(void)
  * more complex. */
 int via_uefi_runtime(void)
 {
+    void *ew;
+    unsigned long flags;
     PRINTK("Called via UEFI Runtime hook\n");
     setup_payload();
-    run_payload();
+    LOOKUP(execute_in_process_context);
+    LOOKUP(irq_enter_rcu);
+    LOOKUP(irq_exit_rcu);
+
+    if (execute_in_process_context == NULL || irq_enter_rcu == NULL || \
+            irq_exit_rcu == NULL) {
+        PRINTK("missing symbols\n");
+        return 0;
+    }
+    // we are leaking this.
+    ew = kmalloc(1024, GFP_ATOMIC);
+    /* Making it clear we are in an interrupt, as we want
+     * execute_in_process_context to not run right now.
+     * We have to save the irq flags, else we hit a warning about a firmware bug
+     * so we also save that before restoring.
+     *
+     * We have to call a function like irq_enter_rcu() as that is the easiest
+     * way of getting preempt_count() to be higher without us having to figure
+     * out its offset (its a percpu value, changing between kernel versions), so
+     * this just happens to be a bit more reliable. */
+    /* from native_save_fl() in the kernel. */
+    asm ("pushf; pop %0" : "=rm" (flags) : : "memory");
+    irq_enter_rcu();
+    execute_in_process_context(start, ew);
+    irq_exit_rcu();
+    asm ("mov %0, %%rax; push %%rax; popf" : : "rm" (flags) : "rax" );
     return 0;
 }
 

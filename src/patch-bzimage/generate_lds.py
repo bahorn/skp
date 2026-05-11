@@ -85,19 +85,6 @@ class Kernel:
 
         return start + blocks[0][0]
 
-    def preempt_count(self):
-        res = self.get('__preempt_count')
-        if res is not None:
-            return res[0]
-
-        res = self.get('pcpu_hot')
-        if res is not None:
-            res = res[0]
-            res += PCPU_OFFSET
-            return res
-
-        raise Exception('finding preempt count failed')
-
     def find_symbols(self, symbols):
         text = None
         sym_addr = {symbol: None for symbol in symbols}
@@ -150,7 +137,6 @@ def generate_lds(kernel, want=WANT, direct_patching=False):
         res['load_offset'] = kernel.find_space(want)
 
     res['_skip_direct_patching'] = int(direct_patching)
-    res['__preempt_count'] = kernel.preempt_count()
     return res
 
 
