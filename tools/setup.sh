@@ -10,4 +10,4 @@ pip install -r requirements.txt
     && git checkout 803a700cf95f772717ac77828bf90e8e2c824caf)
 (git clone https://github.com/bahorn/klude2 tools/klude2 \
     && cd tools/klude2/ \
-    && git checkout 02a312531bc78c66c946fbfa2be051452c615bb2)
+    && git checkout 15b5aa8f692ad1dd89aecf59cc6cf896df0f8a98)
