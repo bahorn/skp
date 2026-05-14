@@ -4,7 +4,7 @@ pip install -r requirements.txt
 # all the latest commits at the time of writing.
 (git clone https://github.com/marin-m/vmlinux-to-elf tools/vmlinux-to-elf \
     && cd tools/vmlinux-to-elf \
-    && git checkout 32afe399b0830b62a654d5c23bbae8c337daabd3)
+    && git checkout d65716128c40ab24a4911a3d46290af98eaba86c)
 (git clone https://github.com/bahorn/easylkb tools/easylkb \
     && cd tools/easylkb/ \
     && git checkout 803a700cf95f772717ac77828bf90e8e2c824caf)
