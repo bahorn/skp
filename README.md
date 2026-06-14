@@ -4,7 +4,7 @@ This is a PoC tool to patch x86 Linux kernel bzImages to load a kSHELF.
 This is a modern version of the idea from Phrack 60-8 [1], but doing a very
 different style of patches.
 
-Supports 5.15+ for both UEFI and BIOS, tested up to 7.0.
+Supports 5.15+ for both UEFI and BIOS, tested up to 7.1.
 
 Primarily tested with kernel images from Ubuntu, and my testing KConfig is
 derived from the default Ubuntu configuration.
